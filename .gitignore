@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+
+# Generated/cache data
+justwatch_cache.json
+plan.json
+last_watchlist.csv
+watchlist-*.csv

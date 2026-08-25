@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Watchlist Plani</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+<div class="page">
+
+  <header class="top">
+    <h1>Watchlist &rarr; Abonelik Plani</h1>
+    <p class="subtitle">Letterboxd watchlist CSV'ni surukle, hangi ay hangi platforma abone olman gerektigini gor.</p>
+  </header>
+
+  <div class="country-row">
+    <label for="country-select">Ulke</label>
+    <select id="country-select"></select>
+  </div>
+
+  <section id="dropzone" class="dropzone">
+    <input type="file" id="file-input" accept=".csv" hidden />
+    <div class="dropzone-inner">
+      <div class="dropzone-icon">&#127916;</div>
+      <div class="dropzone-text">CSV dosyasini buraya surukle</div>
+      <div class="dropzone-sub">ya da tikla ve sec</div>
+    </div>
+  </section>
+
+  <section id="progress" class="progress-panel hidden">
+    <div class="progress-title">JustWatch'ta araniyor&hellip;</div>
+    <div class="progress-bar-track">
+      <div id="progress-bar-fill" class="progress-bar-fill"></div>
+    </div>
+    <div id="progress-detail" class="progress-detail">&nbsp;</div>
+  </section>
+
+  <section id="summary" class="summary hidden"></section>
+
+  <section id="owned-platforms" class="owned-panel hidden"></section>
+
+  <section id="random-picker" class="owned-panel hidden"></section>
+
+  <section id="results" class="results hidden"></section>
+
+  <section id="footer-notes" class="footer-notes hidden"></section>
+
+</div>
+
+<div id="rematch-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div id="rematch-title" class="modal-title"></div>
+      <button id="rematch-close" class="modal-close" type="button">&times;</button>
+    </div>
+    <div id="rematch-body" class="modal-body"></div>
+  </div>
+</div>
+
+<div id="random-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Rastgele Film</div>
+      <button id="random-close" class="modal-close" type="button">&times;</button>
+    </div>
+    <div id="random-body" class="modal-body"></div>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
