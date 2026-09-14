@@ -428,7 +428,7 @@ body::before {
   border-radius: 50%;
   border: 1px solid var(--border);
   background: var(--bg-elevated);
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1;
   cursor: pointer;
   display: flex;

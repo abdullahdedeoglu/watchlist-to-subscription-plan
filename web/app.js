@@ -53,7 +53,7 @@ const I18N = {
     countryLabel: "Ülke",
     langLabel: "Dil",
     dropzoneText: "CSV dosyasını buraya sürükle",
-    dropzoneSub: "ya da tıkla ve seç",
+    dropzoneSub: "Ya da tıkla ve seç",
     progressTitle: "JustWatch'ta aranıyor…",
     progressLoading: "Yükleniyor...",
     progressCacheCheck: "Cache kontrol ediliyor...",
@@ -61,6 +61,7 @@ const I18N = {
     fileTypeAlert: "Lütfen bir .csv dosyası seç.",
     randomPoolLabel: "Rastgele film önerisi hangi platformlar arasından seçilsin? (boş bırakırsan tüm watchlist)",
     randomPickBtn: "🎲 Rastgele film seç",
+    randomTriggerTitle: "Rastgele film seç",
     randomEmptyPool: "Bu havuzda seçilebilecek film kalmadı - başka platform seç ya da izlenenleri geri al.",
     randomNoOffers: "Bu film hiçbir platformda abonelikle bulunamadı.",
     randomRerollBtn: "🎲 Başka film",
@@ -76,19 +77,19 @@ const I18N = {
     sidebarTitle: "Abonelik Sırası",
     ownedBadge: "Sahipsin",
     ownedCheckTitle: "Bu platforma zaten sahipsen işaretle",
-    statPlatformCount: "platform",
-    statNewMovies: "yeni abonelikle film",
-    statAlreadyOwned: "zaten sende var",
-    statWatched: "izledin",
-    statRentBuy: "kirala/satın al ile izlenebilir",
-    statNowhere: "hiçbir yerde yok",
-    statNeedsReview: "eşleşme kontrolü önerilir",
-    statTotal: "toplam watchlist",
+    statPlatformCount: "Platform",
+    statNewMovies: "Yeni abonelikle film",
+    statAlreadyOwned: "Zaten sende var",
+    statWatched: "İzledin",
+    statRentBuy: "Kirala/satın al ile izlenebilir",
+    statNowhere: "Hiçbir yerde yok",
+    statNeedsReview: "Eşleşme kontrolü önerilir",
+    statTotal: "Toplam watchlist",
     catalogBadge: (name) => `${name} kataloğu`,
     watchedToggleTitle: "İzledim işaretle",
     reviewToggleTitle: "Eşleşme yanlış olabilir, kontrol et",
     justwatchMatchNote: (m) => `JustWatch: ${m.matched_title} (${m.matched_year ?? "?"})`,
-    alsoOnPrefix: "ayrıca:",
+    alsoOnPrefix: "Ayrıca:",
     alreadyAvailableTitle: (platforms, count) => `Zaten izleyebilirsin - ${platforms} (${count} film)`,
     orderLabel: (n) => `${n}. sıra`,
     movieCountLabel: (n) => `${n} film`,
@@ -97,7 +98,7 @@ const I18N = {
     buyLabel: "Satın Al",
     nowhereTitle: (n) => `Hiçbir platformda abonelikle bulunamadı (${n})`,
     watchedListTitle: (n) => `İzlediğin filmler (${n})`,
-    undoBtn: "geri al",
+    undoBtn: "Geri al",
     removedTitle: (n) => `Watchlist'ten çıkmış (${n})`,
     errorsTitle: (n) => `Eşleştirilemeyen filmler (${n})`,
   },
@@ -120,7 +121,7 @@ const I18N = {
     countryLabel: "Country",
     langLabel: "Language",
     dropzoneText: "Drag your CSV file here",
-    dropzoneSub: "or click to choose",
+    dropzoneSub: "Or click to choose",
     progressTitle: "Searching JustWatch…",
     progressLoading: "Loading...",
     progressCacheCheck: "Checking cache...",
@@ -128,6 +129,7 @@ const I18N = {
     fileTypeAlert: "Please choose a .csv file.",
     randomPoolLabel: "Which platforms should random picks come from? (leave empty for the whole watchlist)",
     randomPickBtn: "🎲 Pick a random movie",
+    randomTriggerTitle: "Pick a random movie",
     randomEmptyPool: "No movies left in this pool - pick another platform or undo some watched movies.",
     randomNoOffers: "This movie isn't available with a subscription anywhere.",
     randomRerollBtn: "🎲 Another one",
@@ -143,19 +145,19 @@ const I18N = {
     sidebarTitle: "Subscription Order",
     ownedBadge: "Owned",
     ownedCheckTitle: "Check if you already have this platform",
-    statPlatformCount: "platforms",
-    statNewMovies: "movies with new subs",
-    statAlreadyOwned: "already have",
-    statWatched: "watched",
-    statRentBuy: "rent/buy available",
-    statNowhere: "unavailable anywhere",
-    statNeedsReview: "matches to review",
-    statTotal: "total watchlist",
+    statPlatformCount: "Platforms",
+    statNewMovies: "Movies with new subs",
+    statAlreadyOwned: "Already have",
+    statWatched: "Watched",
+    statRentBuy: "Rent/buy available",
+    statNowhere: "Unavailable anywhere",
+    statNeedsReview: "Matches to review",
+    statTotal: "Total watchlist",
     catalogBadge: (name) => `${name} catalog`,
     watchedToggleTitle: "Mark as watched",
     reviewToggleTitle: "Match might be wrong, check it",
     justwatchMatchNote: (m) => `JustWatch: ${m.matched_title} (${m.matched_year ?? "?"})`,
-    alsoOnPrefix: "also on:",
+    alsoOnPrefix: "Also on:",
     alreadyAvailableTitle: (platforms, count) => `You can already watch these - ${platforms} (${count} movies)`,
     orderLabel: (n) => `Step ${n}`,
     movieCountLabel: (n) => `${n} movies`,
@@ -164,7 +166,7 @@ const I18N = {
     buyLabel: "Buy",
     nowhereTitle: (n) => `Not available with a subscription anywhere (${n})`,
     watchedListTitle: (n) => `Movies you've watched (${n})`,
-    undoBtn: "undo",
+    undoBtn: "Undo",
     removedTitle: (n) => `Removed from your watchlist (${n})`,
     errorsTitle: (n) => `Movies that couldn't be matched (${n})`,
   },
@@ -368,12 +370,11 @@ let activePanelKey = null;
 // Tek, duz bir platform listesi - grup yok. Sira, her platformun toplam
 // (izlenmemis) film sayisina gore sabittir ve sahip-olma isaretlemesinden
 // ETKILENMEZ, boylece bir platformu sahiplendiginde yeri degismez, kaybolmaz.
-// Abonelik onerisi (kacinci sirada abone olunmali) sadece bilet uzerindeki
-// kucuk bir rozet - konumu degil.
+// Bilet uzerindeki numara herhangi bir "en iyi sira" algoritmasindan degil,
+// listedeki sirasindan geliyor (sahip olunanlar sayilmadan 1'den basliyor) -
+// boylece numaralar hep bosluksuz ve listeyle ayni sirada gorunur.
 function controlRoomEntries(plan) {
   const owned = new Set(plan.owned_platforms || []);
-  const orderByPlatform = new Map();
-  for (const step of plan.monthly_plan) orderByPlatform.set(step.platform, step.month);
 
   // Kategori kisayollari (zaten sende var / kirala-satin al / hicbir yerde
   // yok) listenin EN USTUNDE - ozellikle "zaten sende var" bir platformu
@@ -393,14 +394,17 @@ function controlRoomEntries(plan) {
     .filter((p) => (plan.platform_movies[p] || []).length)
     .sort((a, b) => plan.platform_movies[b].length - plan.platform_movies[a].length);
 
+  let counter = 0;
   for (const platform of platforms) {
+    const isOwned = owned.has(platform);
+    if (!isOwned) counter++;
     entries.push({
       key: `platform:${platform}`,
       type: "platform",
       platform,
       movies: plan.platform_movies[platform],
-      owned: owned.has(platform),
-      order: orderByPlatform.get(platform) || null,
+      owned: isOwned,
+      order: isOwned ? null : counter,
     });
   }
   return entries;
@@ -1212,7 +1216,7 @@ function renderResults(plan) {
   const randomBtn = document.createElement("button");
   randomBtn.type = "button";
   randomBtn.className = "random-trigger-btn";
-  randomBtn.title = t("randomPickBtn");
+  randomBtn.title = t("randomTriggerTitle");
   randomBtn.textContent = "🎲";
   randomBtn.addEventListener("click", showRandomPick);
   sideHeader.appendChild(randomBtn);
