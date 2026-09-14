@@ -75,6 +75,7 @@ const I18N = {
     statNewMovies: "yeni abonelikle film",
     statAlreadyOwned: "zaten sende var",
     statWatched: "izledin",
+    statRentBuy: "kirala/satin al ile izlenebilir",
     statNowhere: "hicbir yerde yok",
     statNeedsReview: "eslesme kontrolu onerilir",
     statTotal: "toplam watchlist",
@@ -86,6 +87,9 @@ const I18N = {
     alreadyAvailableTitle: (platforms, count) => `Zaten izleyebilirsin - ${platforms} (${count} film)`,
     monthLabel: (n) => `Ay ${n}`,
     movieCountLabel: (n) => `${n} film`,
+    rentBuyTitle: (n) => `Kirala/Satin Al ile Izleyebilirsin (${n})`,
+    rentLabel: "Kirala",
+    buyLabel: "Satin Al",
     nowhereTitle: (n) => `Hicbir platformda abonelikle bulunamadi (${n})`,
     watchedListTitle: (n) => `Izledigin filmler (${n})`,
     undoBtn: "geri al",
@@ -135,6 +139,7 @@ const I18N = {
     statNewMovies: "movies with new subs",
     statAlreadyOwned: "already have",
     statWatched: "watched",
+    statRentBuy: "rent/buy available",
     statNowhere: "unavailable anywhere",
     statNeedsReview: "matches to review",
     statTotal: "total watchlist",
@@ -146,6 +151,9 @@ const I18N = {
     alreadyAvailableTitle: (platforms, count) => `You can already watch these - ${platforms} (${count} movies)`,
     monthLabel: (n) => `Month ${n}`,
     movieCountLabel: (n) => `${n} movies`,
+    rentBuyTitle: (n) => `Available to Rent/Buy (${n})`,
+    rentLabel: "Rent",
+    buyLabel: "Buy",
     nowhereTitle: (n) => `Not available with a subscription anywhere (${n})`,
     watchedListTitle: (n) => `Movies you've watched (${n})`,
     undoBtn: "undo",
@@ -508,7 +516,11 @@ function computeDerivedPlan(rawPlan) {
     month++;
   }
 
-  const nowhereMovies = (rawPlan.not_available_anywhere || []).filter((m) => !watched.has(m.uri));
+  // Abonelikle hicbir yerde bulunamayan filmler icin: kirala/satin al secenegi
+  // olanlari ayri bir bolume, hic secenegi olmayanlari "hicbir yerde yok"a ayir.
+  const noSubscription = (rawPlan.not_available_anywhere || []).filter((m) => !watched.has(m.uri));
+  const rentBuyMovies = noSubscription.filter((m) => (m.rent_buy_offers || []).length > 0);
+  const nowhereMovies = noSubscription.filter((m) => !(m.rent_buy_offers || []).length);
 
   const watchedMovies = Array.from(watched)
     .map((uri) => universe.get(uri))
@@ -520,6 +532,7 @@ function computeDerivedPlan(rawPlan) {
     monthly_plan: monthlyPlan,
     already_available: alreadyAvailable,
     not_available_anywhere: nowhereMovies,
+    rent_buy_available: rentBuyMovies,
     owned_platforms: Array.from(owned).sort(),
     watched_movies: watchedMovies,
   };
@@ -829,6 +842,7 @@ function countNeedsReview(plan) {
   for (const step of plan.monthly_plan) count += step.movies.filter((m) => m.needs_review).length;
   count += (plan.already_available || []).filter((m) => m.needs_review).length;
   count += (plan.not_available_anywhere || []).filter((m) => m.needs_review).length;
+  count += (plan.rent_buy_available || []).filter((m) => m.needs_review).length;
   return count;
 }
 
@@ -847,6 +861,7 @@ function renderSummary(plan) {
     { num: totalMovies, label: t("statNewMovies") },
     { num: plan.already_available.length, label: t("statAlreadyOwned") },
     { num: plan.watched_movies.length, label: t("statWatched") },
+    { num: plan.rent_buy_available.length, label: t("statRentBuy") },
     { num: plan.not_available_anywhere.length, label: t("statNowhere") },
     { num: countNeedsReview(plan), label: t("statNeedsReview") },
     { num: plan.total_movies, label: t("statTotal") },
@@ -937,6 +952,85 @@ function movieCard(movie, platformName, excludePlatforms) {
   return a;
 }
 
+function rentBuyCard(movie) {
+  const card = document.createElement("div");
+  card.className = "movie-card";
+
+  const poster = document.createElement("div");
+  poster.className = "movie-poster";
+  if (movie.poster) {
+    poster.style.backgroundImage = `url("${movie.poster}")`;
+  } else {
+    poster.textContent = movie.title.charAt(0).toUpperCase();
+  }
+
+  const watchedBtn = document.createElement("button");
+  watchedBtn.className = "watched-toggle";
+  watchedBtn.type = "button";
+  watchedBtn.title = t("watchedToggleTitle");
+  watchedBtn.textContent = "✓";
+  watchedBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleWatched(movie.uri);
+    applyAndRender();
+  });
+  poster.appendChild(watchedBtn);
+
+  if (movie.needs_review) {
+    const reviewBtn = document.createElement("button");
+    reviewBtn.className = "review-toggle";
+    reviewBtn.type = "button";
+    reviewBtn.title = t("reviewToggleTitle");
+    reviewBtn.textContent = "⚠";
+    reviewBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openRematchModal(movie);
+    });
+    poster.appendChild(reviewBtn);
+  }
+
+  const title = document.createElement("div");
+  title.className = "movie-title";
+  title.textContent = movie.title;
+
+  const year = document.createElement("div");
+  year.className = "movie-year";
+  year.textContent = movie.year;
+
+  card.appendChild(poster);
+  card.appendChild(title);
+  card.appendChild(year);
+
+  if (movie.needs_review && movie.matched_title) {
+    const reviewNote = document.createElement("div");
+    reviewNote.className = "movie-also-on";
+    reviewNote.style.color = "#ffc857";
+    reviewNote.textContent = t("justwatchMatchNote", movie);
+    card.appendChild(reviewNote);
+  }
+
+  const prices = document.createElement("div");
+  prices.className = "rentbuy-prices";
+  const sorted = [...(movie.rent_buy_offers || [])].sort(
+    (a, b) => (a.price_value ?? Infinity) - (b.price_value ?? Infinity)
+  );
+  for (const offer of sorted) {
+    const link = document.createElement("a");
+    link.className = "rentbuy-chip";
+    link.href = offer.url;
+    link.target = "_blank";
+    link.rel = "noopener";
+    const typeLabel = t(offer.type === "RENT" ? "rentLabel" : "buyLabel");
+    link.textContent = offer.price ? `${offer.platform} ${typeLabel} · ${offer.price}` : `${offer.platform} ${typeLabel}`;
+    prices.appendChild(link);
+  }
+  card.appendChild(prices);
+
+  return card;
+}
+
 function renderResults(plan) {
   resultsEl.innerHTML = "";
 
@@ -986,6 +1080,21 @@ function renderResults(plan) {
     section.appendChild(row);
 
     resultsEl.appendChild(section);
+  }
+
+  if (plan.rent_buy_available && plan.rent_buy_available.length) {
+    const box = document.createElement("div");
+    box.className = "rentbuy-section";
+    const title = document.createElement("div");
+    title.className = "rentbuy-title";
+    title.textContent = t("rentBuyTitle", plan.rent_buy_available.length);
+    box.appendChild(title);
+
+    const row = document.createElement("div");
+    row.className = "movie-row";
+    for (const movie of plan.rent_buy_available) row.appendChild(rentBuyCard(movie));
+    box.appendChild(row);
+    resultsEl.appendChild(box);
   }
 
   if (plan.not_available_anywhere.length) {

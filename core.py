@@ -120,6 +120,31 @@ def flatrate_offers(entry) -> list[dict]:
     return offers
 
 
+def rent_buy_offers(entry) -> list[dict]:
+    """Kirala/satin al teklifleri - platform + tur (RENT/BUY) basina en ucuz
+    teklif (ayni platformda SD/HD/4K gibi birden fazla kalite secenegi
+    olabilir, hepsini degil tek bir temsili fiyati gosteriyoruz)."""
+    best: dict[tuple[str, str], dict] = {}
+    for offer in entry.offers:
+        if offer.monetization_type not in ("RENT", "BUY"):
+            continue
+        key = (offer.package.name, offer.monetization_type)
+        current = best.get(key)
+        cheaper = (
+            current is None
+            or (offer.price_value is not None and (current["price_value"] is None or offer.price_value < current["price_value"]))
+        )
+        if cheaper:
+            best[key] = {
+                "platform": offer.package.name,
+                "type": offer.monetization_type,
+                "price": offer.price_string,
+                "price_value": offer.price_value,
+                "url": offer.url,
+            }
+    return list(best.values())
+
+
 def entry_to_candidate(entry) -> dict:
     """Bir JustWatch MediaEntry'sini cache/UI'da kullanilan sozluk formuna cevirir."""
     offers = flatrate_offers(entry)
@@ -129,6 +154,7 @@ def entry_to_candidate(entry) -> dict:
         "poster": entry.poster,
         "offers": offers,
         "platforms": [o["platform"] for o in offers],
+        "rent_buy_offers": rent_buy_offers(entry),
         "matched": True,
     }
 
@@ -198,6 +224,7 @@ def confirm_match(cache: dict, uri: str, csv_title: str, csv_year: str, country:
         "poster": candidate.get("poster"),
         "offers": candidate.get("offers", []),
         "platforms": candidate.get("platforms", []),
+        "rent_buy_offers": candidate.get("rent_buy_offers", []),
         "matched": True,
         "needs_review": False,
         "manually_confirmed": True,
@@ -311,6 +338,7 @@ def build_plan(cache: dict, current_uris: set, country: str, owned_platforms: li
             "uri": uri,
             "poster": data.get("poster"),
             "offers": data.get("offers", []),
+            "rent_buy_offers": data.get("rent_buy_offers", []),
             "matched_title": data.get("matched_title"),
             "matched_year": data.get("matched_year"),
             "needs_review": bool(needs_review) and not data.get("manually_confirmed"),

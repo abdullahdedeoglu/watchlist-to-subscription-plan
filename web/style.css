@@ -669,6 +669,43 @@ html, body {
   opacity: 0.75;
 }
 
+/* Kirala/Satin Al */
+
+.rentbuy-section { margin-bottom: 36px; }
+
+.rentbuy-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #f5a623;
+  margin-bottom: 14px;
+  padding-left: 2px;
+}
+
+.rentbuy-prices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.rentbuy-chip {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(245, 166, 35, 0.4);
+  background: rgba(245, 166, 35, 0.08);
+  color: #f5a623;
+  text-decoration: none;
+  line-height: 1.3;
+}
+
+.rentbuy-chip:hover {
+  background: rgba(245, 166, 35, 0.2);
+  border-color: #f5a623;
+}
+
 /* Nowhere grid */
 
 .nowhere-section {
