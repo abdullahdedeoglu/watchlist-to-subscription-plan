@@ -26,13 +26,13 @@ MAX_CONCURRENT_REQUESTS = 6
 # Ulke isimleri arayuz dili tr/en icin ayri ayri tutulur; yeni bir arayuz dili
 # eklendiginde her ulkeye o dilde bir isim eklemek yeterli.
 COUNTRIES = {
-    "TR": {"tr": "Turkiye", "en": "Turkey", "lang": "tr"},
-    "US": {"tr": "Amerika Birlesik Devletleri", "en": "United States", "lang": "en"},
-    "GB": {"tr": "Ingiltere", "en": "United Kingdom", "lang": "en"},
+    "TR": {"tr": "Türkiye", "en": "Turkey", "lang": "tr"},
+    "US": {"tr": "Amerika Birleşik Devletleri", "en": "United States", "lang": "en"},
+    "GB": {"tr": "İngiltere", "en": "United Kingdom", "lang": "en"},
     "DE": {"tr": "Almanya", "en": "Germany", "lang": "de"},
     "FR": {"tr": "Fransa", "en": "France", "lang": "fr"},
-    "ES": {"tr": "Ispanya", "en": "Spain", "lang": "es"},
-    "IT": {"tr": "Italya", "en": "Italy", "lang": "it"},
+    "ES": {"tr": "İspanya", "en": "Spain", "lang": "es"},
+    "IT": {"tr": "İtalya", "en": "Italy", "lang": "it"},
     "NL": {"tr": "Hollanda", "en": "Netherlands", "lang": "nl"},
     "PT": {"tr": "Portekiz", "en": "Portugal", "lang": "pt"},
     "BR": {"tr": "Brezilya", "en": "Brazil", "lang": "pt"},
@@ -40,10 +40,10 @@ COUNTRIES = {
     "AU": {"tr": "Avustralya", "en": "Australia", "lang": "en"},
     "MX": {"tr": "Meksika", "en": "Mexico", "lang": "es"},
     "PL": {"tr": "Polonya", "en": "Poland", "lang": "pl"},
-    "SE": {"tr": "Isvec", "en": "Sweden", "lang": "sv"},
+    "SE": {"tr": "İsveç", "en": "Sweden", "lang": "sv"},
     "IN": {"tr": "Hindistan", "en": "India", "lang": "en"},
     "JP": {"tr": "Japonya", "en": "Japan", "lang": "ja"},
-    "KR": {"tr": "Guney Kore", "en": "South Korea", "lang": "ko"},
+    "KR": {"tr": "Güney Kore", "en": "South Korea", "lang": "ko"},
     "RU": {"tr": "Rusya", "en": "Russia", "lang": "ru"},
     "AR": {"tr": "Arjantin", "en": "Argentina", "lang": "es"},
 }
@@ -61,10 +61,10 @@ def parse_csv_text(text: str) -> list[dict]:
     reader = csv.DictReader(io.StringIO(text))
     if reader.fieldnames is None or not set(EXPECTED_CSV_COLUMNS) <= set(reader.fieldnames):
         raise ValueError(
-            "Bu dosya beklenen Letterboxd watchlist formatinda degil "
+            "Bu dosya beklenen Letterboxd watchlist formatında değil "
             f"(gerekli kolonlar: {', '.join(EXPECTED_CSV_COLUMNS)}). "
             "Letterboxd'dan Ayarlar -> Import & Export -> Export Data ile "
-            "indirdigin watchlist.csv dosyasini kullandigindan emin ol."
+            "indirdiğin watchlist.csv dosyasını kullandığından emin ol."
         )
     for row in reader:
         rows.append(

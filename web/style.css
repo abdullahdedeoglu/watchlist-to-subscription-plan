@@ -101,7 +101,7 @@ body::before {
 }
 
 .howto-box summary,
-.owned-panel summary {
+.random-pool-panel summary {
   cursor: pointer;
   font-weight: 600;
   font-size: 13.5px;
@@ -111,10 +111,10 @@ body::before {
 }
 
 .howto-box summary::-webkit-details-marker,
-.owned-panel summary::-webkit-details-marker { display: none; }
+.random-pool-panel summary::-webkit-details-marker { display: none; }
 
 .howto-box summary::before,
-.owned-panel summary::before {
+.random-pool-panel summary::before {
   content: "\25B8";
   display: inline-block;
   margin-right: 8px;
@@ -123,7 +123,7 @@ body::before {
 }
 
 .howto-box[open] summary::before,
-.owned-panel[open] summary::before { transform: rotate(90deg); }
+.random-pool-panel[open] summary::before { transform: rotate(90deg); }
 
 .howto-steps {
   margin: 14px 0 0;
@@ -326,9 +326,9 @@ body::before {
 }
 
 .stat-row-secondary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 22px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 16px 22px;
 }
 
 .summary-stat-sm {
@@ -350,21 +350,7 @@ body::before {
   color: var(--text-dim);
 }
 
-/* Owned platforms / random picker panels (details) */
-
-.owned-panel {
-  margin-top: 20px;
-  padding: 16px 20px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-#random-picker { margin-top: 32px; }
-
-.owned-panel summary.owned-title { margin-bottom: 0; }
-
-.owned-panel[open] summary.owned-title { margin-bottom: 14px; }
+/* Rastgele-film havuzu tikleri (random-modal icinde) */
 
 .owned-chips {
   display: flex;
@@ -393,77 +379,197 @@ body::before {
   color: var(--text);
 }
 
-/* Already available (owned platforms) */
-
-.already-section {
-  margin-bottom: 32px;
-  padding: 20px 22px;
-  scroll-margin-top: 60px;
-  background: var(--positive-soft);
-  border: 1px solid rgba(63, 143, 128, 0.35);
-  border-radius: var(--radius);
-}
-
-.already-title {
-  font-family: var(--f-display);
-  font-style: italic;
-  font-size: 16px;
-  font-weight: 560;
-  color: var(--positive);
-  margin-bottom: 14px;
-}
-
-/* Hizli gezinme seridi - platform bolumleri artik izgarada oldugu icin,
-   hangisinin nerede oldugunu bulmayi kolaylastiran sabit (sticky) bir serit. */
-
-.quick-nav {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  padding: 10px 0;
-  margin-bottom: 20px;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-}
-
-.quick-nav-pill {
-  font-family: var(--f-mono);
-  font-size: 11px;
-  color: var(--text-dim);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 5px 11px;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: color 0.15s ease, border-color 0.15s ease;
-}
-
-.quick-nav-pill:hover { color: var(--accent); border-color: var(--accent); }
-
 /* Results */
 
 .results { margin-top: 32px; }
 
-/* Platform bolumleri genis ekranlarda yan yana bir izgarada - sayfa boyu
-   tek bir uzun sutuna sigdirmak yerine yatay alani da kullanir. */
-.plan-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 24px;
-  margin-bottom: 36px;
-}
+/* Kumanda paneli: solda sabit bir sira listesi (platform "biletleri" +
+   kisayol satirlari), sagda sadece secili olanin icerigi. Sayfa boyu asagi
+   kaydirmak yerine, tek panel icinde geziliyor - secim degisince sadece
+   sag taraf yenilenir. */
 
-.platform-section {
-  padding: 18px 20px 20px;
-  background: var(--bg-elevated);
+.control-shell {
+  display: grid;
+  grid-template-columns: 270px 1fr;
+  height: 640px;
+  background: var(--bg-sunken);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  scroll-margin-top: 60px;
+  overflow: hidden;
 }
+
+.control-side {
+  background: var(--bg-sunken);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 18px 14px;
+}
+
+.control-side-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 4px 2px 14px 6px;
+}
+
+.control-side-title {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+}
+
+.random-trigger-btn {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.random-trigger-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.hticket {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.hticket:hover { border-color: #3a3d2e; }
+
+.hticket.active { border-color: var(--accent); }
+
+.hticket-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px 6px;
+}
+
+.hticket-order {
+  font-family: var(--f-mono);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.hticket.active .hticket-order { color: var(--accent); }
+
+.hticket-owned-badge {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--positive);
+}
+
+.hticket-perf { position: relative; height: 0; border-top: 1px dashed var(--border); }
+
+.hticket-perf::before,
+.hticket-perf::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--bg-sunken);
+}
+.hticket-perf::before { left: -1px; }
+.hticket-perf::after { right: -1px; }
+
+.hticket-bottom {
+  padding: 6px 10px 9px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.hticket-owned-check {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  width: 15px;
+  height: 15px;
+  flex: none;
+  position: relative;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-sunken);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.hticket-owned-check:hover { border-color: var(--accent); }
+
+.hticket-owned-check:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.hticket-owned-check:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 7px;
+  border: solid var(--accent-ink);
+  border-width: 0 2px 2px 0;
+  transform: rotate(43deg);
+}
+
+.hticket-name { font-size: 13px; font-weight: 600; }
+
+.side-divider { height: 1px; background: var(--border); margin: 14px 6px; }
+
+.side-link {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.side-link:hover { background: var(--bg-elevated); color: var(--text); }
+
+.side-link b { font-family: var(--f-mono); font-weight: 600; color: var(--text); }
+
+.side-link.active { background: var(--accent-soft); color: var(--text); }
+
+.side-link.active b { color: var(--accent); }
+
+.control-main { background: var(--bg); overflow-y: auto; padding: 26px 30px; }
+
+.control-main-sub { color: var(--text-dim); font-size: 13px; margin: -6px 0 20px; }
+
+.control-grid { display: flex; flex-wrap: wrap; gap: 18px 16px; }
+
+.cat-positive { color: var(--positive); }
+.cat-warn { color: var(--warn); }
+.cat-dim { color: var(--text-dim); }
 
 .platform-header {
   display: flex;
@@ -503,32 +609,6 @@ body::before {
   margin-bottom: 16px;
   opacity: 0.8;
 }
-
-/* Yatay kaydirilan film sirasi + sag kenar soluklasma ipucu */
-
-.movie-row-wrap { position: relative; }
-
-.movie-row-wrap::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 8px;
-  width: 36px;
-  background: linear-gradient(90deg, transparent, var(--bg) 88%);
-  pointer-events: none;
-}
-
-.movie-row {
-  display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  padding-bottom: 8px;
-  scrollbar-width: thin;
-}
-
-.movie-row::-webkit-scrollbar { height: 6px; }
-.movie-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
 .movie-card {
   flex: 0 0 auto;
@@ -752,6 +832,17 @@ body::before {
 
 /* Random pick */
 
+.random-pool-panel {
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-align: left;
+}
+
+.random-pool-panel[open] summary { margin-bottom: 10px; }
+
 .random-btn {
   margin-top: 14px;
   padding: 10px 18px;
@@ -838,18 +929,6 @@ body::before {
 
 /* Kirala/Satin Al */
 
-.rentbuy-section { margin-bottom: 36px; scroll-margin-top: 60px; }
-
-.rentbuy-title {
-  font-family: var(--f-display);
-  font-style: italic;
-  font-size: 16px;
-  font-weight: 560;
-  color: var(--warn);
-  margin-bottom: 14px;
-  padding-left: 2px;
-}
-
 .rentbuy-prices {
   display: flex;
   flex-wrap: wrap;
@@ -878,24 +957,6 @@ body::before {
 
 /* Nowhere grid */
 
-.nowhere-section {
-  margin-top: 8px;
-  padding: 20px 22px;
-  scroll-margin-top: 60px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.nowhere-title {
-  font-family: var(--f-display);
-  font-style: italic;
-  font-size: 15px;
-  font-weight: 560;
-  color: var(--text-dim);
-  margin-bottom: 12px;
-}
-
 .nowhere-grid {
   display: flex;
   flex-wrap: wrap;
@@ -905,7 +966,7 @@ body::before {
 .nowhere-chip {
   font-size: 12px;
   color: var(--text-dim);
-  background: var(--bg-sunken);
+  background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 6px 10px;
@@ -949,12 +1010,29 @@ body::before {
 
 .hidden { display: none !important; }
 
+@media (max-width: 720px) {
+  .control-shell { grid-template-columns: 1fr; height: auto; }
+  .control-side {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    overflow-x: auto;
+    overflow-y: visible;
+    gap: 10px;
+    padding: 14px;
+  }
+  .control-side-title { display: none; }
+  .hticket { flex: none; width: 170px; margin-bottom: 0; }
+  .side-link { flex: none; white-space: nowrap; }
+  .side-divider { display: none; }
+  .control-main { height: 480px; padding: 20px; }
+}
+
 @media (max-width: 560px) {
   .page { padding: 28px 16px 60px; }
   .top h1 { font-size: 25px; }
   .movie-card, .movie-poster { width: 108px; }
   .movie-poster { height: 158px; }
   .stat-row-secondary { gap: 16px 22px; }
-  .plan-grid { gap: 16px; grid-template-columns: 1fr; }
-  .platform-section { padding: 14px 16px 16px; }
+  .control-main { padding: 16px; }
 }

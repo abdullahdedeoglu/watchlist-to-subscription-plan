@@ -6,9 +6,9 @@ const progressPanel = document.getElementById("progress");
 const progressFill = document.getElementById("progress-bar-fill");
 const progressDetail = document.getElementById("progress-detail");
 const summaryEl = document.getElementById("summary");
-const ownedPlatformsEl = document.getElementById("owned-platforms");
-const quickNavEl = document.getElementById("quick-nav");
 const resultsEl = document.getElementById("results");
+const controlSideEl = document.getElementById("control-side");
+const controlMainEl = document.getElementById("control-main");
 const footerEl = document.getElementById("footer-notes");
 const rematchModal = document.getElementById("rematch-modal");
 const rematchTitle = document.getElementById("rematch-title");
@@ -16,10 +16,11 @@ const rematchClose = document.getElementById("rematch-close");
 const rematchBody = document.getElementById("rematch-body");
 const rematchSearchInput = document.getElementById("rematch-search-input");
 const rematchSearchBtn = document.getElementById("rematch-search-btn");
-const randomPickerEl = document.getElementById("random-picker");
 const randomModal = document.getElementById("random-modal");
 const randomClose = document.getElementById("random-close");
 const randomBody = document.getElementById("random-body");
+const randomPoolPanelEl = document.getElementById("random-pool-panel");
+const randomPoolChipsEl = document.getElementById("random-pool-chips");
 
 const OWNED_STORAGE_KEY = "watchlist-owned-platforms";
 const WATCHED_STORAGE_KEY = "watchlist-watched";
@@ -34,69 +35,72 @@ const LANG_MANUAL_STORAGE_KEY = "watchlist-lang-manual";
 // hangi ulkelerin o dili varsayilan aldigini ekle.
 const I18N = {
   tr: {
-    pageTitle: "Watchlist Plani",
-    headerTitle: "Watchlist → Abonelik Plani",
-    subtitle: "Letterboxd watchlist CSV'ni surukle, hangi sirada hangi platforma abone olman gerektigini gor.",
-    howtoSummary: "Nasil kullanilir?",
-    howtoStep1: "Letterboxd'da <strong>Ayarlar → Import &amp; Export → Export Data</strong> yoluna git ve watchlist'ini disa aktar (bir <code>.zip</code> dosyasi iner).",
-    howtoStep2: "ZIP'i ac, icinden <code>watchlist.csv</code> dosyasini cikar.",
-    howtoStep3: "O CSV dosyasini asagidaki alana surukle-birak (ya da alana tikla ve dosyayi sec).",
-    howtoStep4: "Ust taraftan ulkeni sec — varsayilan Turkiye. JustWatch'ta o ulkedeki abonelik secenekleri aranir, biraz surebilir.",
-    howtoStep5: "Arama bitince, hangi sirayla hangi platforma abone olursan watchlist'ini en hizli bitirecegini gorursun.",
-    howtoStep6: "Poster'in sag ustundeki <strong>&check;</strong> izledim isaretler, sol ustteki sari <strong>&#9888;</strong> ise eslesmeyi kontrol etmeni onerir.",
-    howtoNote: "Watchlist'in bir kere yuklendikten sonra hatirlanir, sayfayi tekrar actiginda otomatik gelir. Guncellemek icin yeni CSV'yi tekrar surukleyip birakman yeterli.",
-    devModeLabel: "Gelistirici modu",
+    pageTitle: "Watchlist Planı",
+    headerTitle: "Watchlist → Abonelik Planı",
+    subtitle: "Letterboxd watchlist CSV'ni sürükle, hangi sırada hangi platforma abone olman gerektiğini gör.",
+    howtoSummary: "Nasıl kullanılır?",
+    howtoStep1: "Letterboxd'da <strong>Ayarlar → Import &amp; Export → Export Data</strong> yoluna git ve watchlist'ini dışa aktar (bir <code>.zip</code> dosyası iner).",
+    howtoStep2: "ZIP'i aç, içinden <code>watchlist.csv</code> dosyasını çıkar.",
+    howtoStep3: "O CSV dosyasını aşağıdaki alana sürükle-bırak (ya da alana tıkla ve dosyayı seç).",
+    howtoStep4: "Üst taraftan ülkeni seç — varsayılan Türkiye. JustWatch'ta o ülkedeki abonelik seçenekleri aranır, biraz sürebilir.",
+    howtoStep5: "Arama bitince, hangi sırayla hangi platforma abone olursan watchlist'ini en hızlı bitireceğini görürsün.",
+    howtoStep6: "Poster'in sağ üstündeki <strong>&check;</strong> izledim işaretler, sol üstteki sarı <strong>&#9888;</strong> ise eşleşmeyi kontrol etmeni önerir.",
+    howtoNote: "Watchlist'in bir kere yüklendikten sonra hatırlanır, sayfayı tekrar açtığında otomatik gelir. Güncellemek için yeni CSV'yi tekrar sürükleyip bırakman yeterli.",
+    devModeLabel: "Geliştirici modu",
     devClearBtn: "Cache'i temizle",
     devClearBtnWorking: "Temizleniyor...",
-    devClearConfirm: "JustWatch eslestirme cache'i tamamen silinsin mi? Bir sonraki aramada tum filmler sifirdan aranacak.",
-    countryLabel: "Ulke",
+    devClearConfirm: "JustWatch eşleştirme cache'i tamamen silinsin mi? Bir sonraki aramada tüm filmler sıfırdan aranacak.",
+    countryLabel: "Ülke",
     langLabel: "Dil",
-    dropzoneText: "CSV dosyasini buraya surukle",
-    dropzoneSub: "ya da tikla ve sec",
-    progressTitle: "JustWatch'ta araniyor…",
-    progressLoading: "Yukleniyor...",
+    dropzoneText: "CSV dosyasını buraya sürükle",
+    dropzoneSub: "Ya da tıkla ve seç",
+    progressTitle: "JustWatch'ta aranıyor…",
+    progressLoading: "Yükleniyor...",
     progressCacheCheck: "Cache kontrol ediliyor...",
     progressError: "Hata: ",
-    fileTypeAlert: "Lutfen bir .csv dosyasi sec.",
-    randomPoolLabel: "Rastgele film onerisi hangi platformlar arasindan secilsin? (bos birakirsan tum watchlist)",
-    randomPickBtn: "🎲 Rastgele film sec",
-    randomEmptyPool: "Bu havuzda secilebilecek film kalmadi - baska platform sec ya da izlenenleri geri al.",
-    randomNoOffers: "Bu film hicbir platformda abonelikle bulunamadi.",
-    randomRerollBtn: "🎲 Baska film",
-    markWatchedBtn: "Izledim isaretle",
-    rematchTitlePrefix: "Eslesmeyi kontrol et",
-    rematchSubtitle: (m) => `${m.title} (${m.year}) icin JustWatch sonuclari`,
-    rematchSearching: "Araniyor...",
-    rematchNoResults: "Sonuc bulunamadi. Farkli bir isimle tekrar dene.",
+    fileTypeAlert: "Lütfen bir .csv dosyası seç.",
+    randomPoolLabel: "Rastgele film önerisi hangi platformlar arasından seçilsin? (boş bırakırsan tüm watchlist)",
+    randomPickBtn: "🎲 Rastgele film seç",
+    randomTriggerTitle: "Rastgele film seç",
+    randomEmptyPool: "Bu havuzda seçilebilecek film kalmadı - başka platform seç ya da izlenenleri geri al.",
+    randomNoOffers: "Bu film hiçbir platformda abonelikle bulunamadı.",
+    randomRerollBtn: "🎲 Başka film",
+    markWatchedBtn: "İzledim işaretle",
+    rematchTitlePrefix: "Eşleşmeyi kontrol et",
+    rematchSubtitle: (m) => `${m.title} (${m.year}) için JustWatch sonuçları`,
+    rematchSearching: "Aranıyor...",
+    rematchNoResults: "Sonuç bulunamadı. Farklı bir isimle tekrar dene.",
     rematchSaving: "Kaydediliyor...",
-    rematchSearchPlaceholder: "Farkli bir isimle JustWatch'ta ara...",
+    rematchSearchPlaceholder: "Farklı bir isimle JustWatch'ta ara...",
     rematchSearchBtn: "Ara",
     randomModalTitle: "Rastgele Film",
-    ownedTitle: "Zaten sahip oldugun platformlar (varsa isaretle, plan onlari ucretsiz saysin)",
-    statPlatformCount: "platform",
-    statNewMovies: "yeni abonelikle film",
-    statAlreadyOwned: "zaten sende var",
-    statWatched: "izledin",
-    statRentBuy: "kirala/satin al ile izlenebilir",
-    statNowhere: "hicbir yerde yok",
-    statNeedsReview: "eslesme kontrolu onerilir",
-    statTotal: "toplam watchlist",
-    catalogBadge: (name) => `${name} katalogu`,
-    watchedToggleTitle: "Izledim isaretle",
-    reviewToggleTitle: "Eslesme yanlis olabilir, kontrol et",
+    sidebarTitle: "Abonelik Sırası",
+    ownedBadge: "Sahipsin",
+    ownedCheckTitle: "Bu platforma zaten sahipsen işaretle",
+    statPlatformCount: "Platform",
+    statNewMovies: "Yeni abonelikle film",
+    statAlreadyOwned: "Zaten sende var",
+    statWatched: "İzledin",
+    statRentBuy: "Kirala/satın al ile izlenebilir",
+    statNowhere: "Hiçbir yerde yok",
+    statNeedsReview: "Eşleşme kontrolü önerilir",
+    statTotal: "Toplam watchlist",
+    catalogBadge: (name) => `${name} kataloğu`,
+    watchedToggleTitle: "İzledim işaretle",
+    reviewToggleTitle: "Eşleşme yanlış olabilir, kontrol et",
     justwatchMatchNote: (m) => `JustWatch: ${m.matched_title} (${m.matched_year ?? "?"})`,
-    alsoOnPrefix: "ayrica:",
+    alsoOnPrefix: "Ayrıca:",
     alreadyAvailableTitle: (platforms, count) => `Zaten izleyebilirsin - ${platforms} (${count} film)`,
-    orderLabel: (n) => `${n}. sira`,
+    orderLabel: (n) => `${n}. sıra`,
     movieCountLabel: (n) => `${n} film`,
-    rentBuyTitle: (n) => `Kirala/Satin Al ile Izleyebilirsin (${n})`,
+    rentBuyTitle: (n) => `Kirala/Satın Al ile İzleyebilirsin (${n})`,
     rentLabel: "Kirala",
-    buyLabel: "Satin Al",
-    nowhereTitle: (n) => `Hicbir platformda abonelikle bulunamadi (${n})`,
-    watchedListTitle: (n) => `Izledigin filmler (${n})`,
-    undoBtn: "geri al",
-    removedTitle: (n) => `Watchlist'ten cikmis (${n})`,
-    errorsTitle: (n) => `Eslestirilemeyen filmler (${n})`,
+    buyLabel: "Satın Al",
+    nowhereTitle: (n) => `Hiçbir platformda abonelikle bulunamadı (${n})`,
+    watchedListTitle: (n) => `İzlediğin filmler (${n})`,
+    undoBtn: "Geri al",
+    removedTitle: (n) => `Watchlist'ten çıkmış (${n})`,
+    errorsTitle: (n) => `Eşleştirilemeyen filmler (${n})`,
   },
   en: {
     pageTitle: "Watchlist Plan",
@@ -117,7 +121,7 @@ const I18N = {
     countryLabel: "Country",
     langLabel: "Language",
     dropzoneText: "Drag your CSV file here",
-    dropzoneSub: "or click to choose",
+    dropzoneSub: "Or click to choose",
     progressTitle: "Searching JustWatch…",
     progressLoading: "Loading...",
     progressCacheCheck: "Checking cache...",
@@ -125,6 +129,7 @@ const I18N = {
     fileTypeAlert: "Please choose a .csv file.",
     randomPoolLabel: "Which platforms should random picks come from? (leave empty for the whole watchlist)",
     randomPickBtn: "🎲 Pick a random movie",
+    randomTriggerTitle: "Pick a random movie",
     randomEmptyPool: "No movies left in this pool - pick another platform or undo some watched movies.",
     randomNoOffers: "This movie isn't available with a subscription anywhere.",
     randomRerollBtn: "🎲 Another one",
@@ -137,20 +142,22 @@ const I18N = {
     rematchSearchPlaceholder: "Search JustWatch with a different name...",
     rematchSearchBtn: "Search",
     randomModalTitle: "Random Movie",
-    ownedTitle: "Platforms you already have (check any — the plan treats them as free)",
-    statPlatformCount: "platforms",
-    statNewMovies: "movies with new subs",
-    statAlreadyOwned: "already have",
-    statWatched: "watched",
-    statRentBuy: "rent/buy available",
-    statNowhere: "unavailable anywhere",
-    statNeedsReview: "matches to review",
-    statTotal: "total watchlist",
+    sidebarTitle: "Subscription Order",
+    ownedBadge: "Owned",
+    ownedCheckTitle: "Check if you already have this platform",
+    statPlatformCount: "Platforms",
+    statNewMovies: "Movies with new subs",
+    statAlreadyOwned: "Already have",
+    statWatched: "Watched",
+    statRentBuy: "Rent/buy available",
+    statNowhere: "Unavailable anywhere",
+    statNeedsReview: "Matches to review",
+    statTotal: "Total watchlist",
     catalogBadge: (name) => `${name} catalog`,
     watchedToggleTitle: "Mark as watched",
     reviewToggleTitle: "Match might be wrong, check it",
     justwatchMatchNote: (m) => `JustWatch: ${m.matched_title} (${m.matched_year ?? "?"})`,
-    alsoOnPrefix: "also on:",
+    alsoOnPrefix: "Also on:",
     alreadyAvailableTitle: (platforms, count) => `You can already watch these - ${platforms} (${count} movies)`,
     orderLabel: (n) => `Step ${n}`,
     movieCountLabel: (n) => `${n} movies`,
@@ -159,7 +166,7 @@ const I18N = {
     buyLabel: "Buy",
     nowhereTitle: (n) => `Not available with a subscription anywhere (${n})`,
     watchedListTitle: (n) => `Movies you've watched (${n})`,
-    undoBtn: "undo",
+    undoBtn: "Undo",
     removedTitle: (n) => `Removed from your watchlist (${n})`,
     errorsTitle: (n) => `Movies that couldn't be matched (${n})`,
   },
@@ -353,53 +360,187 @@ function colorForPlatform(name) {
   return `hsl(${hue}, 65%, 55%)`;
 }
 
-// Yatay kaydirilan film sirasinin sag kenarina, daha fazla film oldugunu
-// belli eden bir soluklasma (fade) efekti ekler - CSS ::after ile.
-function wrapMovieRow(row) {
-  const wrap = document.createElement("div");
-  wrap.className = "movie-row-wrap";
-  wrap.appendChild(row);
-  return wrap;
-}
+// Kumanda paneli: soldaki sira listesi (bilet + kisayol satirlari) tek bir
+// platformu/kategoriyi secili tutar, sag tarafta sadece onun icerigi gorunur.
+// Boylece sonuclar tek uzun bir sutunda asagi kaymak yerine, sabit yukseklikli
+// bir panelde gezilir. `activePanelKey` render'lar arasinda hangi sekmenin
+// secili kaldigini hatirlar (izlendi/sahip-olunan degisince sifirlanmaz).
+let activePanelKey = null;
 
-function slugify(text) {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "x";
-}
+// Tek, duz bir platform listesi - grup yok. Sira, her platformun toplam
+// (izlenmemis) film sayisina gore sabittir ve sahip-olma isaretlemesinden
+// ETKILENMEZ, boylece bir platformu sahiplendiginde yeri degismez, kaybolmaz.
+// Bilet uzerindeki numara herhangi bir "en iyi sira" algoritmasindan degil,
+// listedeki sirasindan geliyor (sahip olunanlar sayilmadan 1'den basliyor) -
+// boylece numaralar hep bosluksuz ve listeyle ayni sirada gorunur.
+function controlRoomEntries(plan) {
+  const owned = new Set(plan.owned_platforms || []);
 
-// Sonuclar sayfa boyu uzun bir tek sutuna sigmiyor - platform bolumleri artik
-// yan yana bir izgarada, bu da hangi bolumun nerede oldugunu bulmayi
-// zorlastirabilir. Bu yuzden sonuclarin ustune, tiklaninca ilgili bolume
-// atlayan kisa bir "hizli gezinme" seridi ekliyoruz.
-function renderQuickNav(plan) {
-  const items = [];
+  // Kategori kisayollari (zaten sende var / kirala-satin al / hicbir yerde
+  // yok) listenin EN USTUNDE - ozellikle "zaten sende var" bir platformu
+  // sahiplendiginde aninda belirir, asagi kaydirmadan gorunsun diye.
+  const entries = [];
   if (plan.already_available && plan.already_available.length) {
-    items.push({ id: "sec-already", label: t("statAlreadyOwned"), count: plan.already_available.length });
-  }
-  for (const step of plan.monthly_plan) {
-    items.push({ id: `sec-platform-${slugify(step.platform)}`, label: step.platform, count: step.movies.length });
+    entries.push({ key: "already", type: "already" });
   }
   if (plan.rent_buy_available && plan.rent_buy_available.length) {
-    items.push({ id: "sec-rentbuy", label: t("statRentBuy"), count: plan.rent_buy_available.length });
+    entries.push({ key: "rentbuy", type: "rentbuy" });
   }
   if (plan.not_available_anywhere.length) {
-    items.push({ id: "sec-nowhere", label: t("statNowhere"), count: plan.not_available_anywhere.length });
+    entries.push({ key: "nowhere", type: "nowhere" });
   }
 
-  if (items.length < 2) {
-    quickNavEl.classList.add("hidden");
-    quickNavEl.innerHTML = "";
-    return;
+  const platforms = Object.keys(plan.platform_movies || {})
+    .filter((p) => (plan.platform_movies[p] || []).length)
+    .sort((a, b) => plan.platform_movies[b].length - plan.platform_movies[a].length);
+
+  let counter = 0;
+  for (const platform of platforms) {
+    const isOwned = owned.has(platform);
+    if (!isOwned) counter++;
+    entries.push({
+      key: `platform:${platform}`,
+      type: "platform",
+      platform,
+      movies: plan.platform_movies[platform],
+      owned: isOwned,
+      order: isOwned ? null : counter,
+    });
+  }
+  return entries;
+}
+
+function toggleOwnedPlatform(platform, isOwned) {
+  const current = new Set(getOwnedPlatforms());
+  if (isOwned) current.add(platform);
+  else current.delete(platform);
+  setOwnedPlatforms(Array.from(current));
+  applyAndRender();
+}
+
+function sidebarRow(entry, plan) {
+  if (entry.type === "platform") {
+    const leftSlot = entry.owned
+      ? `<span class="hticket-owned-badge">${t("ownedBadge")}</span>`
+      : entry.order
+      ? `<span class="hticket-order">${String(entry.order).padStart(2, "0")}</span>`
+      : "<span></span>";
+    const el = document.createElement("div");
+    el.className = "hticket";
+    el.innerHTML = `
+      <div class="hticket-top">
+        ${leftSlot}
+        <span class="platform-count">${t("movieCountLabel", entry.movies.length)}</span>
+      </div>
+      <div class="hticket-perf"></div>
+      <div class="hticket-bottom">
+        <input type="checkbox" class="hticket-owned-check" title="${t("ownedCheckTitle")}" ${entry.owned ? "checked" : ""} />
+        <span class="hticket-name">${entry.platform}</span>
+      </div>
+    `;
+    const checkbox = el.querySelector(".hticket-owned-check");
+    checkbox.addEventListener("click", (e) => e.stopPropagation());
+    checkbox.addEventListener("change", () => toggleOwnedPlatform(entry.platform, checkbox.checked));
+    return el;
   }
 
-  quickNavEl.innerHTML = "";
-  for (const item of items) {
-    const a = document.createElement("a");
-    a.className = "quick-nav-pill";
-    a.href = `#${item.id}`;
-    a.textContent = `${item.label} · ${item.count}`;
-    quickNavEl.appendChild(a);
+  const label = { already: t("statAlreadyOwned"), rentbuy: t("statRentBuy"), nowhere: t("statNowhere") }[entry.type];
+  const count = {
+    already: (plan.already_available || []).length,
+    rentbuy: (plan.rent_buy_available || []).length,
+    nowhere: plan.not_available_anywhere.length,
+  }[entry.type];
+  const el = document.createElement("div");
+  el.className = "side-link";
+  el.innerHTML = `<span>${label}</span><b>${count}</b>`;
+  return el;
+}
+
+function panelForEntry(entry, plan) {
+  const panel = document.createElement("div");
+  panel.className = "panel active";
+
+  const head = document.createElement("div");
+  head.className = "platform-header";
+
+  if (entry.type === "platform") {
+    const badge = entry.owned
+      ? `<span class="platform-month cat-positive">${t("ownedBadge")}</span>`
+      : entry.order
+      ? `<span class="platform-month">${t("orderLabel", entry.order)}</span>`
+      : "";
+    head.innerHTML = `
+      ${badge}
+      <span class="platform-name">${entry.platform}</span>
+      <span class="platform-count">${t("movieCountLabel", entry.movies.length)}</span>
+    `;
+    panel.appendChild(head);
+    const bar = document.createElement("div");
+    bar.className = "platform-bar";
+    bar.style.background = colorForPlatform(entry.platform);
+    panel.appendChild(bar);
+    const grid = document.createElement("div");
+    grid.className = "control-grid";
+    for (const movie of entry.movies) grid.appendChild(movieCard(movie, entry.platform));
+    panel.appendChild(grid);
+    return panel;
   }
-  quickNavEl.classList.remove("hidden");
+
+  if (entry.type === "already") {
+    head.innerHTML = `<span class="platform-name cat-positive">${t("statAlreadyOwned")}</span>`;
+    panel.appendChild(head);
+    const sub = document.createElement("p");
+    sub.className = "control-main-sub";
+    sub.textContent = t("alreadyAvailableTitle", plan.owned_platforms.join(", "), plan.already_available.length);
+    panel.appendChild(sub);
+    const grid = document.createElement("div");
+    grid.className = "control-grid";
+    for (const movie of plan.already_available) {
+      const hrefPlatform = (movie.offers || [])
+        .map((o) => o.platform)
+        .find((p) => plan.owned_platforms.includes(p));
+      grid.appendChild(movieCard(movie, hrefPlatform, plan.owned_platforms));
+    }
+    panel.appendChild(grid);
+    return panel;
+  }
+
+  if (entry.type === "rentbuy") {
+    head.innerHTML = `<span class="platform-name cat-warn">${t("statRentBuy")}</span>`;
+    panel.appendChild(head);
+    const sub = document.createElement("p");
+    sub.className = "control-main-sub";
+    sub.textContent = t("rentBuyTitle", plan.rent_buy_available.length);
+    panel.appendChild(sub);
+    const grid = document.createElement("div");
+    grid.className = "control-grid";
+    for (const movie of plan.rent_buy_available) grid.appendChild(rentBuyCard(movie));
+    panel.appendChild(grid);
+    return panel;
+  }
+
+  // nowhere
+  head.innerHTML = `<span class="platform-name cat-dim">${t("statNowhere")}</span>`;
+  panel.appendChild(head);
+  const sub = document.createElement("p");
+  sub.className = "control-main-sub";
+  sub.textContent = t("nowhereTitle", plan.not_available_anywhere.length);
+  panel.appendChild(sub);
+  const grid = document.createElement("div");
+  grid.className = "nowhere-grid";
+  for (const movie of plan.not_available_anywhere) {
+    const chip = document.createElement("span");
+    chip.className = "nowhere-chip" + (movie.needs_review ? " needs-review" : "");
+    const label = movie.needs_review ? " ⚠" : "";
+    chip.innerHTML = `${movie.title} <span class="yr">${movie.year}</span>${label}`;
+    if (movie.needs_review) {
+      chip.title = t("reviewToggleTitle");
+      chip.addEventListener("click", () => openRematchModal(movie));
+    }
+    grid.appendChild(chip);
+  }
+  panel.appendChild(grid);
+  return panel;
 }
 
 ["dragenter", "dragover"].forEach((evt) =>
@@ -441,6 +582,7 @@ function handleFile(file) {
 }
 
 async function uploadCsv(csvText) {
+  activePanelKey = null;
   resultsEl.classList.add("hidden");
   summaryEl.classList.add("hidden");
   footerEl.classList.add("hidden");
@@ -529,6 +671,16 @@ function computeDerivedPlan(rawPlan) {
     filmsByPlatform[platform] = uris;
   }
 
+  // Sira almasa da (baska platformlarda zaten kapsandigi veya sahip olundugu
+  // icin), her platform kendi kataloguyla ayri ayri gezilebilsin diye tam
+  // (izlenmemis) film listesini de sakliyoruz.
+  const platformMovies = {};
+  for (const platform of platforms) {
+    platformMovies[platform] = [...filmsByPlatform[platform]]
+      .map((uri) => universe.get(uri))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }
+
   const alreadySet = new Set();
   const alreadyAvailable = [];
   for (const platform of platforms) {
@@ -587,6 +739,7 @@ function computeDerivedPlan(rawPlan) {
     rent_buy_available: rentBuyMovies,
     owned_platforms: Array.from(owned).sort(),
     watched_movies: watchedMovies,
+    platform_movies: platformMovies,
   };
 }
 
@@ -594,32 +747,26 @@ function applyAndRender() {
   if (!lastRawPlan) return;
   const derived = computeDerivedPlan(lastRawPlan);
   renderSummary(derived);
-  renderOwnedPanel(derived);
-  renderQuickNav(derived);
-  renderRandomPicker(derived);
+  renderRandomPoolChips(derived);
   renderResults(derived);
   renderFooterNotes(derived);
 }
 
 // --- Rastgele film oner ---
+// Tetikleyici buton artik sidebar'in sag ust kosesinde (bkz. renderResults);
+// hangi platformlardan secilecegini belirleyen tikler ise rastgele-film
+// modalinin icinde, katlanir bir panelde duruyor - sayfada ayrica yer kaplamaz.
 
-function renderRandomPicker(plan) {
+function renderRandomPoolChips(plan) {
   const platforms = Object.keys(plan.movies_by_platform || {});
   if (!platforms.length) {
-    randomPickerEl.classList.add("hidden");
+    randomPoolPanelEl.classList.add("hidden");
     return;
   }
 
   const selected = new Set(getRandomPoolPlatforms());
-  randomPickerEl.innerHTML = "";
+  randomPoolChipsEl.innerHTML = "";
 
-  const title = document.createElement("summary");
-  title.className = "owned-title";
-  title.textContent = t("randomPoolLabel");
-  randomPickerEl.appendChild(title);
-
-  const chips = document.createElement("div");
-  chips.className = "owned-chips";
   for (const platform of platforms) {
     const label = document.createElement("label");
     label.className = "owned-chip" + (selected.has(platform) ? " checked" : "");
@@ -633,22 +780,15 @@ function renderRandomPicker(plan) {
       else current.delete(platform);
       setRandomPoolPlatforms(Array.from(current));
       label.classList.toggle("checked", checkbox.checked);
+      showRandomPick();
     });
 
     label.appendChild(checkbox);
     label.appendChild(document.createTextNode(platform));
-    chips.appendChild(label);
+    randomPoolChipsEl.appendChild(label);
   }
-  randomPickerEl.appendChild(chips);
 
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "random-btn";
-  btn.textContent = t("randomPickBtn");
-  btn.addEventListener("click", showRandomPick);
-  randomPickerEl.appendChild(btn);
-
-  randomPickerEl.classList.remove("hidden");
+  randomPoolPanelEl.classList.remove("hidden");
 }
 
 function randomPool() {
@@ -849,46 +989,6 @@ async function confirmMatch(movie, candidate) {
   if (lastCsvText) uploadCsv(lastCsvText);
 }
 
-function renderOwnedPanel(plan) {
-  const platforms = Object.keys(plan.movies_by_platform || {});
-  if (!platforms.length) {
-    ownedPlatformsEl.classList.add("hidden");
-    return;
-  }
-
-  const owned = new Set(plan.owned_platforms || []);
-  ownedPlatformsEl.innerHTML = "";
-
-  const title = document.createElement("summary");
-  title.className = "owned-title";
-  title.textContent = t("ownedTitle");
-  ownedPlatformsEl.appendChild(title);
-
-  const chips = document.createElement("div");
-  chips.className = "owned-chips";
-  for (const platform of platforms) {
-    const label = document.createElement("label");
-    label.className = "owned-chip" + (owned.has(platform) ? " checked" : "");
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = owned.has(platform);
-    checkbox.addEventListener("change", () => {
-      const current = new Set(getOwnedPlatforms());
-      if (checkbox.checked) current.add(platform);
-      else current.delete(platform);
-      setOwnedPlatforms(Array.from(current));
-      label.classList.toggle("checked", checkbox.checked);
-      applyAndRender();
-    });
-
-    label.appendChild(checkbox);
-    label.appendChild(document.createTextNode(platform));
-    chips.appendChild(label);
-  }
-  ownedPlatformsEl.appendChild(chips);
-  ownedPlatformsEl.classList.remove("hidden");
-}
 
 function countNeedsReview(plan) {
   let count = 0;
@@ -1089,107 +1189,62 @@ function rentBuyCard(movie) {
 }
 
 function renderResults(plan) {
-  resultsEl.innerHTML = "";
+  const entries = controlRoomEntries(plan);
 
-  if (plan.already_available && plan.already_available.length) {
-    const box = document.createElement("div");
-    box.id = "sec-already";
-    box.className = "already-section";
-    const title = document.createElement("div");
-    title.className = "already-title";
-    title.textContent = t("alreadyAvailableTitle", plan.owned_platforms.join(", "), plan.already_available.length);
-    box.appendChild(title);
-
-    const row = document.createElement("div");
-    row.className = "movie-row";
-    for (const movie of plan.already_available) {
-      const hrefPlatform = (movie.offers || [])
-        .map((o) => o.platform)
-        .find((p) => plan.owned_platforms.includes(p));
-      row.appendChild(movieCard(movie, hrefPlatform, plan.owned_platforms));
-    }
-    box.appendChild(wrapMovieRow(row));
-    resultsEl.appendChild(box);
+  if (!entries.length) {
+    resultsEl.classList.add("hidden");
+    return;
   }
 
-  if (plan.monthly_plan.length) {
-    // Platform bolumleri artik tek bir uzun sutun yerine, genis ekranlarda
-    // yan yana bir izgarada - sayfa boyu asagi kaydirma ihtiyacini azaltir.
-    const grid = document.createElement("div");
-    grid.className = "plan-grid";
+  if (!activePanelKey || !entries.some((e) => e.key === activePanelKey)) {
+    // Ilk acilista kategori kisayollari degil, gercek abonelik onerisi
+    // (ilk platform bileti) secili gelsin - kategoriler sadece listede en
+    // ustte gorunsun diye orada, varsayilan odak yine plan onerisinde.
+    const firstPlatform = entries.find((e) => e.type === "platform");
+    activePanelKey = (firstPlatform || entries[0]).key;
+  }
 
-    for (const step of plan.monthly_plan) {
-      const color = colorForPlatform(step.platform);
+  controlSideEl.innerHTML = "";
+  controlMainEl.innerHTML = "";
 
-      const section = document.createElement("section");
-      section.id = `sec-platform-${slugify(step.platform)}`;
-      section.className = "platform-section";
+  const sideHeader = document.createElement("div");
+  sideHeader.className = "control-side-header";
+  const sideTitle = document.createElement("div");
+  sideTitle.className = "control-side-title";
+  sideTitle.textContent = t("sidebarTitle");
+  sideHeader.appendChild(sideTitle);
+  const randomBtn = document.createElement("button");
+  randomBtn.type = "button";
+  randomBtn.className = "random-trigger-btn";
+  randomBtn.title = t("randomTriggerTitle");
+  randomBtn.textContent = "🎲";
+  randomBtn.addEventListener("click", showRandomPick);
+  sideHeader.appendChild(randomBtn);
+  controlSideEl.appendChild(sideHeader);
 
-      const header = document.createElement("div");
-      header.className = "platform-header";
-      header.innerHTML = `
-        <span class="platform-month">${t("orderLabel", step.month)}</span>
-        <span class="platform-name">${step.platform}</span>
-        <span class="platform-count">${t("movieCountLabel", step.movies.length)}</span>
-      `;
-      section.appendChild(header);
-
-      const bar = document.createElement("div");
-      bar.className = "platform-bar";
-      bar.style.background = color;
-      section.appendChild(bar);
-
-      const row = document.createElement("div");
-      row.className = "movie-row";
-      for (const movie of step.movies) row.appendChild(movieCard(movie, step.platform));
-      section.appendChild(wrapMovieRow(row));
-
-      grid.appendChild(section);
+  let sawCategory = false;
+  let dividerPlaced = false;
+  for (const entry of entries) {
+    if (entry.type !== "platform") {
+      sawCategory = true;
+    } else if (sawCategory && !dividerPlaced) {
+      const divider = document.createElement("div");
+      divider.className = "side-divider";
+      controlSideEl.appendChild(divider);
+      dividerPlaced = true;
     }
 
-    resultsEl.appendChild(grid);
+    const row = sidebarRow(entry, plan);
+    row.classList.toggle("active", entry.key === activePanelKey);
+    row.addEventListener("click", () => {
+      activePanelKey = entry.key;
+      renderResults(plan);
+    });
+    controlSideEl.appendChild(row);
   }
 
-  if (plan.rent_buy_available && plan.rent_buy_available.length) {
-    const box = document.createElement("div");
-    box.id = "sec-rentbuy";
-    box.className = "rentbuy-section";
-    const title = document.createElement("div");
-    title.className = "rentbuy-title";
-    title.textContent = t("rentBuyTitle", plan.rent_buy_available.length);
-    box.appendChild(title);
-
-    const row = document.createElement("div");
-    row.className = "movie-row";
-    for (const movie of plan.rent_buy_available) row.appendChild(rentBuyCard(movie));
-    box.appendChild(wrapMovieRow(row));
-    resultsEl.appendChild(box);
-  }
-
-  if (plan.not_available_anywhere.length) {
-    const box = document.createElement("div");
-    box.id = "sec-nowhere";
-    box.className = "nowhere-section";
-    const title = document.createElement("div");
-    title.className = "nowhere-title";
-    title.textContent = t("nowhereTitle", plan.not_available_anywhere.length);
-    const grid = document.createElement("div");
-    grid.className = "nowhere-grid";
-    for (const movie of plan.not_available_anywhere) {
-      const chip = document.createElement("span");
-      chip.className = "nowhere-chip" + (movie.needs_review ? " needs-review" : "");
-      const label = movie.needs_review ? " ⚠" : "";
-      chip.innerHTML = `${movie.title} <span class="yr">${movie.year}</span>${label}`;
-      if (movie.needs_review) {
-        chip.title = t("reviewToggleTitle");
-        chip.addEventListener("click", () => openRematchModal(movie));
-      }
-      grid.appendChild(chip);
-    }
-    box.appendChild(title);
-    box.appendChild(grid);
-    resultsEl.appendChild(box);
-  }
+  const activeEntry = entries.find((e) => e.key === activePanelKey);
+  controlMainEl.appendChild(panelForEntry(activeEntry, plan));
 
   resultsEl.classList.remove("hidden");
 }
