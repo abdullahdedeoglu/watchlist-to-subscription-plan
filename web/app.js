@@ -7,8 +7,9 @@ const progressFill = document.getElementById("progress-bar-fill");
 const progressDetail = document.getElementById("progress-detail");
 const summaryEl = document.getElementById("summary");
 const ownedPlatformsEl = document.getElementById("owned-platforms");
-const quickNavEl = document.getElementById("quick-nav");
 const resultsEl = document.getElementById("results");
+const controlSideEl = document.getElementById("control-side");
+const controlMainEl = document.getElementById("control-main");
 const footerEl = document.getElementById("footer-notes");
 const rematchModal = document.getElementById("rematch-modal");
 const rematchTitle = document.getElementById("rematch-title");
@@ -73,6 +74,7 @@ const I18N = {
     rematchSearchBtn: "Ara",
     randomModalTitle: "Rastgele Film",
     ownedTitle: "Zaten sahip oldugun platformlar (varsa isaretle, plan onlari ucretsiz saysin)",
+    sidebarTitle: "Abonelik Sirasi",
     statPlatformCount: "platform",
     statNewMovies: "yeni abonelikle film",
     statAlreadyOwned: "zaten sende var",
@@ -138,6 +140,7 @@ const I18N = {
     rematchSearchBtn: "Search",
     randomModalTitle: "Random Movie",
     ownedTitle: "Platforms you already have (check any — the plan treats them as free)",
+    sidebarTitle: "Subscription Order",
     statPlatformCount: "platforms",
     statNewMovies: "movies with new subs",
     statAlreadyOwned: "already have",
@@ -353,53 +356,138 @@ function colorForPlatform(name) {
   return `hsl(${hue}, 65%, 55%)`;
 }
 
-// Yatay kaydirilan film sirasinin sag kenarina, daha fazla film oldugunu
-// belli eden bir soluklasma (fade) efekti ekler - CSS ::after ile.
-function wrapMovieRow(row) {
-  const wrap = document.createElement("div");
-  wrap.className = "movie-row-wrap";
-  wrap.appendChild(row);
-  return wrap;
-}
+// Kumanda paneli: soldaki sira listesi (bilet + kisayol satirlari) tek bir
+// platformu/kategoriyi secili tutar, sag tarafta sadece onun icerigi gorunur.
+// Boylece sonuclar tek uzun bir sutunda asagi kaymak yerine, sabit yukseklikli
+// bir panelde gezilir. `activePanelKey` render'lar arasinda hangi sekmenin
+// secili kaldigini hatirlar (izlendi/sahip-olunan degisince sifirlanmaz).
+let activePanelKey = null;
 
-function slugify(text) {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "x";
-}
-
-// Sonuclar sayfa boyu uzun bir tek sutuna sigmiyor - platform bolumleri artik
-// yan yana bir izgarada, bu da hangi bolumun nerede oldugunu bulmayi
-// zorlastirabilir. Bu yuzden sonuclarin ustune, tiklaninca ilgili bolume
-// atlayan kisa bir "hizli gezinme" seridi ekliyoruz.
-function renderQuickNav(plan) {
-  const items = [];
-  if (plan.already_available && plan.already_available.length) {
-    items.push({ id: "sec-already", label: t("statAlreadyOwned"), count: plan.already_available.length });
-  }
+function controlRoomEntries(plan) {
+  const entries = [];
   for (const step of plan.monthly_plan) {
-    items.push({ id: `sec-platform-${slugify(step.platform)}`, label: step.platform, count: step.movies.length });
+    entries.push({ key: `platform:${step.platform}`, type: "platform", step });
+  }
+  if (plan.already_available && plan.already_available.length) {
+    entries.push({ key: "already", type: "already" });
   }
   if (plan.rent_buy_available && plan.rent_buy_available.length) {
-    items.push({ id: "sec-rentbuy", label: t("statRentBuy"), count: plan.rent_buy_available.length });
+    entries.push({ key: "rentbuy", type: "rentbuy" });
   }
   if (plan.not_available_anywhere.length) {
-    items.push({ id: "sec-nowhere", label: t("statNowhere"), count: plan.not_available_anywhere.length });
+    entries.push({ key: "nowhere", type: "nowhere" });
+  }
+  return entries;
+}
+
+function sidebarRow(entry, plan) {
+  if (entry.type === "platform") {
+    const el = document.createElement("div");
+    el.className = "hticket";
+    el.innerHTML = `
+      <div class="hticket-top">
+        <span class="hticket-order">${String(entry.step.month).padStart(2, "0")}</span>
+        <span class="platform-count">${t("movieCountLabel", entry.step.movies.length)}</span>
+      </div>
+      <div class="hticket-perf"></div>
+      <div class="hticket-bottom"><div class="hticket-name">${entry.step.platform}</div></div>
+    `;
+    return el;
   }
 
-  if (items.length < 2) {
-    quickNavEl.classList.add("hidden");
-    quickNavEl.innerHTML = "";
-    return;
+  const label = { already: t("statAlreadyOwned"), rentbuy: t("statRentBuy"), nowhere: t("statNowhere") }[entry.type];
+  const count = {
+    already: (plan.already_available || []).length,
+    rentbuy: (plan.rent_buy_available || []).length,
+    nowhere: plan.not_available_anywhere.length,
+  }[entry.type];
+  const el = document.createElement("div");
+  el.className = "side-link";
+  el.innerHTML = `<span>${label}</span><b>${count}</b>`;
+  return el;
+}
+
+function panelForEntry(entry, plan) {
+  const panel = document.createElement("div");
+  panel.className = "panel active";
+
+  const head = document.createElement("div");
+  head.className = "platform-header";
+
+  if (entry.type === "platform") {
+    const step = entry.step;
+    head.innerHTML = `
+      <span class="platform-month">${t("orderLabel", step.month)}</span>
+      <span class="platform-name">${step.platform}</span>
+      <span class="platform-count">${t("movieCountLabel", step.movies.length)}</span>
+    `;
+    panel.appendChild(head);
+    const bar = document.createElement("div");
+    bar.className = "platform-bar";
+    bar.style.background = colorForPlatform(step.platform);
+    panel.appendChild(bar);
+    const grid = document.createElement("div");
+    grid.className = "control-grid";
+    for (const movie of step.movies) grid.appendChild(movieCard(movie, step.platform));
+    panel.appendChild(grid);
+    return panel;
   }
 
-  quickNavEl.innerHTML = "";
-  for (const item of items) {
-    const a = document.createElement("a");
-    a.className = "quick-nav-pill";
-    a.href = `#${item.id}`;
-    a.textContent = `${item.label} · ${item.count}`;
-    quickNavEl.appendChild(a);
+  if (entry.type === "already") {
+    head.innerHTML = `<span class="platform-name cat-positive">${t("statAlreadyOwned")}</span>`;
+    panel.appendChild(head);
+    const sub = document.createElement("p");
+    sub.className = "control-main-sub";
+    sub.textContent = t("alreadyAvailableTitle", plan.owned_platforms.join(", "), plan.already_available.length);
+    panel.appendChild(sub);
+    const grid = document.createElement("div");
+    grid.className = "control-grid";
+    for (const movie of plan.already_available) {
+      const hrefPlatform = (movie.offers || [])
+        .map((o) => o.platform)
+        .find((p) => plan.owned_platforms.includes(p));
+      grid.appendChild(movieCard(movie, hrefPlatform, plan.owned_platforms));
+    }
+    panel.appendChild(grid);
+    return panel;
   }
-  quickNavEl.classList.remove("hidden");
+
+  if (entry.type === "rentbuy") {
+    head.innerHTML = `<span class="platform-name cat-warn">${t("statRentBuy")}</span>`;
+    panel.appendChild(head);
+    const sub = document.createElement("p");
+    sub.className = "control-main-sub";
+    sub.textContent = t("rentBuyTitle", plan.rent_buy_available.length);
+    panel.appendChild(sub);
+    const grid = document.createElement("div");
+    grid.className = "control-grid";
+    for (const movie of plan.rent_buy_available) grid.appendChild(rentBuyCard(movie));
+    panel.appendChild(grid);
+    return panel;
+  }
+
+  // nowhere
+  head.innerHTML = `<span class="platform-name cat-dim">${t("statNowhere")}</span>`;
+  panel.appendChild(head);
+  const sub = document.createElement("p");
+  sub.className = "control-main-sub";
+  sub.textContent = t("nowhereTitle", plan.not_available_anywhere.length);
+  panel.appendChild(sub);
+  const grid = document.createElement("div");
+  grid.className = "nowhere-grid";
+  for (const movie of plan.not_available_anywhere) {
+    const chip = document.createElement("span");
+    chip.className = "nowhere-chip" + (movie.needs_review ? " needs-review" : "");
+    const label = movie.needs_review ? " ⚠" : "";
+    chip.innerHTML = `${movie.title} <span class="yr">${movie.year}</span>${label}`;
+    if (movie.needs_review) {
+      chip.title = t("reviewToggleTitle");
+      chip.addEventListener("click", () => openRematchModal(movie));
+    }
+    grid.appendChild(chip);
+  }
+  panel.appendChild(grid);
+  return panel;
 }
 
 ["dragenter", "dragover"].forEach((evt) =>
@@ -441,6 +529,7 @@ function handleFile(file) {
 }
 
 async function uploadCsv(csvText) {
+  activePanelKey = null;
   resultsEl.classList.add("hidden");
   summaryEl.classList.add("hidden");
   footerEl.classList.add("hidden");
@@ -595,7 +684,6 @@ function applyAndRender() {
   const derived = computeDerivedPlan(lastRawPlan);
   renderSummary(derived);
   renderOwnedPanel(derived);
-  renderQuickNav(derived);
   renderRandomPicker(derived);
   renderResults(derived);
   renderFooterNotes(derived);
@@ -1089,107 +1177,48 @@ function rentBuyCard(movie) {
 }
 
 function renderResults(plan) {
-  resultsEl.innerHTML = "";
+  const entries = controlRoomEntries(plan);
 
-  if (plan.already_available && plan.already_available.length) {
-    const box = document.createElement("div");
-    box.id = "sec-already";
-    box.className = "already-section";
-    const title = document.createElement("div");
-    title.className = "already-title";
-    title.textContent = t("alreadyAvailableTitle", plan.owned_platforms.join(", "), plan.already_available.length);
-    box.appendChild(title);
-
-    const row = document.createElement("div");
-    row.className = "movie-row";
-    for (const movie of plan.already_available) {
-      const hrefPlatform = (movie.offers || [])
-        .map((o) => o.platform)
-        .find((p) => plan.owned_platforms.includes(p));
-      row.appendChild(movieCard(movie, hrefPlatform, plan.owned_platforms));
-    }
-    box.appendChild(wrapMovieRow(row));
-    resultsEl.appendChild(box);
+  if (!entries.length) {
+    resultsEl.classList.add("hidden");
+    return;
   }
 
-  if (plan.monthly_plan.length) {
-    // Platform bolumleri artik tek bir uzun sutun yerine, genis ekranlarda
-    // yan yana bir izgarada - sayfa boyu asagi kaydirma ihtiyacini azaltir.
-    const grid = document.createElement("div");
-    grid.className = "plan-grid";
+  if (!activePanelKey || !entries.some((e) => e.key === activePanelKey)) {
+    activePanelKey = entries[0].key;
+  }
 
-    for (const step of plan.monthly_plan) {
-      const color = colorForPlatform(step.platform);
+  controlSideEl.innerHTML = "";
+  controlMainEl.innerHTML = "";
 
-      const section = document.createElement("section");
-      section.id = `sec-platform-${slugify(step.platform)}`;
-      section.className = "platform-section";
+  const sideTitle = document.createElement("div");
+  sideTitle.className = "control-side-title";
+  sideTitle.textContent = t("sidebarTitle");
+  controlSideEl.appendChild(sideTitle);
 
-      const header = document.createElement("div");
-      header.className = "platform-header";
-      header.innerHTML = `
-        <span class="platform-month">${t("orderLabel", step.month)}</span>
-        <span class="platform-name">${step.platform}</span>
-        <span class="platform-count">${t("movieCountLabel", step.movies.length)}</span>
-      `;
-      section.appendChild(header);
-
-      const bar = document.createElement("div");
-      bar.className = "platform-bar";
-      bar.style.background = color;
-      section.appendChild(bar);
-
-      const row = document.createElement("div");
-      row.className = "movie-row";
-      for (const movie of step.movies) row.appendChild(movieCard(movie, step.platform));
-      section.appendChild(wrapMovieRow(row));
-
-      grid.appendChild(section);
+  let sawPlatform = false;
+  let dividerPlaced = false;
+  for (const entry of entries) {
+    if (entry.type === "platform") {
+      sawPlatform = true;
+    } else if (sawPlatform && !dividerPlaced) {
+      const divider = document.createElement("div");
+      divider.className = "side-divider";
+      controlSideEl.appendChild(divider);
+      dividerPlaced = true;
     }
 
-    resultsEl.appendChild(grid);
+    const row = sidebarRow(entry, plan);
+    row.classList.toggle("active", entry.key === activePanelKey);
+    row.addEventListener("click", () => {
+      activePanelKey = entry.key;
+      renderResults(plan);
+    });
+    controlSideEl.appendChild(row);
   }
 
-  if (plan.rent_buy_available && plan.rent_buy_available.length) {
-    const box = document.createElement("div");
-    box.id = "sec-rentbuy";
-    box.className = "rentbuy-section";
-    const title = document.createElement("div");
-    title.className = "rentbuy-title";
-    title.textContent = t("rentBuyTitle", plan.rent_buy_available.length);
-    box.appendChild(title);
-
-    const row = document.createElement("div");
-    row.className = "movie-row";
-    for (const movie of plan.rent_buy_available) row.appendChild(rentBuyCard(movie));
-    box.appendChild(wrapMovieRow(row));
-    resultsEl.appendChild(box);
-  }
-
-  if (plan.not_available_anywhere.length) {
-    const box = document.createElement("div");
-    box.id = "sec-nowhere";
-    box.className = "nowhere-section";
-    const title = document.createElement("div");
-    title.className = "nowhere-title";
-    title.textContent = t("nowhereTitle", plan.not_available_anywhere.length);
-    const grid = document.createElement("div");
-    grid.className = "nowhere-grid";
-    for (const movie of plan.not_available_anywhere) {
-      const chip = document.createElement("span");
-      chip.className = "nowhere-chip" + (movie.needs_review ? " needs-review" : "");
-      const label = movie.needs_review ? " ⚠" : "";
-      chip.innerHTML = `${movie.title} <span class="yr">${movie.year}</span>${label}`;
-      if (movie.needs_review) {
-        chip.title = t("reviewToggleTitle");
-        chip.addEventListener("click", () => openRematchModal(movie));
-      }
-      grid.appendChild(chip);
-    }
-    box.appendChild(title);
-    box.appendChild(grid);
-    resultsEl.appendChild(box);
-  }
+  const activeEntry = entries.find((e) => e.key === activePanelKey);
+  controlMainEl.appendChild(panelForEntry(activeEntry, plan));
 
   resultsEl.classList.remove("hidden");
 }
