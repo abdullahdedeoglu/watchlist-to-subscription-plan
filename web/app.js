@@ -16,10 +16,11 @@ const rematchClose = document.getElementById("rematch-close");
 const rematchBody = document.getElementById("rematch-body");
 const rematchSearchInput = document.getElementById("rematch-search-input");
 const rematchSearchBtn = document.getElementById("rematch-search-btn");
-const randomPickerEl = document.getElementById("random-picker");
 const randomModal = document.getElementById("random-modal");
 const randomClose = document.getElementById("random-close");
 const randomBody = document.getElementById("random-body");
+const randomPoolPanelEl = document.getElementById("random-pool-panel");
+const randomPoolChipsEl = document.getElementById("random-pool-chips");
 
 const OWNED_STORAGE_KEY = "watchlist-owned-platforms";
 const WATCHED_STORAGE_KEY = "watchlist-watched";
@@ -374,19 +375,10 @@ function controlRoomEntries(plan) {
   const orderByPlatform = new Map();
   for (const step of plan.monthly_plan) orderByPlatform.set(step.platform, step.month);
 
-  const platforms = Object.keys(plan.platform_movies || {})
-    .filter((p) => (plan.platform_movies[p] || []).length)
-    .sort((a, b) => plan.platform_movies[b].length - plan.platform_movies[a].length);
-
-  const entries = platforms.map((platform) => ({
-    key: `platform:${platform}`,
-    type: "platform",
-    platform,
-    movies: plan.platform_movies[platform],
-    owned: owned.has(platform),
-    order: orderByPlatform.get(platform) || null,
-  }));
-
+  // Kategori kisayollari (zaten sende var / kirala-satin al / hicbir yerde
+  // yok) listenin EN USTUNDE - ozellikle "zaten sende var" bir platformu
+  // sahiplendiginde aninda belirir, asagi kaydirmadan gorunsun diye.
+  const entries = [];
   if (plan.already_available && plan.already_available.length) {
     entries.push({ key: "already", type: "already" });
   }
@@ -395,6 +387,21 @@ function controlRoomEntries(plan) {
   }
   if (plan.not_available_anywhere.length) {
     entries.push({ key: "nowhere", type: "nowhere" });
+  }
+
+  const platforms = Object.keys(plan.platform_movies || {})
+    .filter((p) => (plan.platform_movies[p] || []).length)
+    .sort((a, b) => plan.platform_movies[b].length - plan.platform_movies[a].length);
+
+  for (const platform of platforms) {
+    entries.push({
+      key: `platform:${platform}`,
+      type: "platform",
+      platform,
+      movies: plan.platform_movies[platform],
+      owned: owned.has(platform),
+      order: orderByPlatform.get(platform) || null,
+    });
   }
   return entries;
 }
@@ -736,30 +743,26 @@ function applyAndRender() {
   if (!lastRawPlan) return;
   const derived = computeDerivedPlan(lastRawPlan);
   renderSummary(derived);
-  renderRandomPicker(derived);
+  renderRandomPoolChips(derived);
   renderResults(derived);
   renderFooterNotes(derived);
 }
 
 // --- Rastgele film oner ---
+// Tetikleyici buton artik sidebar'in sag ust kosesinde (bkz. renderResults);
+// hangi platformlardan secilecegini belirleyen tikler ise rastgele-film
+// modalinin icinde, katlanir bir panelde duruyor - sayfada ayrica yer kaplamaz.
 
-function renderRandomPicker(plan) {
+function renderRandomPoolChips(plan) {
   const platforms = Object.keys(plan.movies_by_platform || {});
   if (!platforms.length) {
-    randomPickerEl.classList.add("hidden");
+    randomPoolPanelEl.classList.add("hidden");
     return;
   }
 
   const selected = new Set(getRandomPoolPlatforms());
-  randomPickerEl.innerHTML = "";
+  randomPoolChipsEl.innerHTML = "";
 
-  const title = document.createElement("summary");
-  title.className = "owned-title";
-  title.textContent = t("randomPoolLabel");
-  randomPickerEl.appendChild(title);
-
-  const chips = document.createElement("div");
-  chips.className = "owned-chips";
   for (const platform of platforms) {
     const label = document.createElement("label");
     label.className = "owned-chip" + (selected.has(platform) ? " checked" : "");
@@ -773,22 +776,15 @@ function renderRandomPicker(plan) {
       else current.delete(platform);
       setRandomPoolPlatforms(Array.from(current));
       label.classList.toggle("checked", checkbox.checked);
+      showRandomPick();
     });
 
     label.appendChild(checkbox);
     label.appendChild(document.createTextNode(platform));
-    chips.appendChild(label);
+    randomPoolChipsEl.appendChild(label);
   }
-  randomPickerEl.appendChild(chips);
 
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "random-btn";
-  btn.textContent = t("randomPickBtn");
-  btn.addEventListener("click", showRandomPick);
-  randomPickerEl.appendChild(btn);
-
-  randomPickerEl.classList.remove("hidden");
+  randomPoolPanelEl.classList.remove("hidden");
 }
 
 function randomPool() {
@@ -1197,23 +1193,37 @@ function renderResults(plan) {
   }
 
   if (!activePanelKey || !entries.some((e) => e.key === activePanelKey)) {
-    activePanelKey = entries[0].key;
+    // Ilk acilista kategori kisayollari degil, gercek abonelik onerisi
+    // (ilk platform bileti) secili gelsin - kategoriler sadece listede en
+    // ustte gorunsun diye orada, varsayilan odak yine plan onerisinde.
+    const firstPlatform = entries.find((e) => e.type === "platform");
+    activePanelKey = (firstPlatform || entries[0]).key;
   }
 
   controlSideEl.innerHTML = "";
   controlMainEl.innerHTML = "";
 
+  const sideHeader = document.createElement("div");
+  sideHeader.className = "control-side-header";
   const sideTitle = document.createElement("div");
   sideTitle.className = "control-side-title";
   sideTitle.textContent = t("sidebarTitle");
-  controlSideEl.appendChild(sideTitle);
+  sideHeader.appendChild(sideTitle);
+  const randomBtn = document.createElement("button");
+  randomBtn.type = "button";
+  randomBtn.className = "random-trigger-btn";
+  randomBtn.title = t("randomPickBtn");
+  randomBtn.textContent = "🎲";
+  randomBtn.addEventListener("click", showRandomPick);
+  sideHeader.appendChild(randomBtn);
+  controlSideEl.appendChild(sideHeader);
 
-  let sawPlatform = false;
+  let sawCategory = false;
   let dividerPlaced = false;
   for (const entry of entries) {
-    if (entry.type === "platform") {
-      sawPlatform = true;
-    } else if (sawPlatform && !dividerPlaced) {
+    if (entry.type !== "platform") {
+      sawCategory = true;
+    } else if (sawCategory && !dividerPlaced) {
       const divider = document.createElement("div");
       divider.className = "side-divider";
       controlSideEl.appendChild(divider);
