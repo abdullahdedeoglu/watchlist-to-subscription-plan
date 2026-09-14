@@ -428,6 +428,16 @@ body::before {
   margin: 4px 6px 14px;
 }
 
+.control-side-subtitle {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  opacity: 0.75;
+  margin: 12px 6px 8px;
+}
+
 .hticket {
   display: flex;
   flex-direction: column;
@@ -460,6 +470,15 @@ body::before {
 
 .hticket.active .hticket-order { color: var(--accent); }
 
+.hticket-owned-badge {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--positive);
+}
+
 .hticket-perf { position: relative; height: 0; border-top: 1px dashed var(--border); }
 
 .hticket-perf::before,
@@ -475,7 +494,14 @@ body::before {
 .hticket-perf::before { left: -1px; }
 .hticket-perf::after { right: -1px; }
 
-.hticket-bottom { padding: 6px 10px 9px; }
+.hticket-bottom {
+  padding: 6px 10px 9px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.hticket-owned-check { margin: 0; accent-color: var(--accent); cursor: pointer; flex: none; }
 
 .hticket-name { font-size: 13px; font-weight: 600; }
 

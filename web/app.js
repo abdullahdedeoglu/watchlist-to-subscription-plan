@@ -6,7 +6,6 @@ const progressPanel = document.getElementById("progress");
 const progressFill = document.getElementById("progress-bar-fill");
 const progressDetail = document.getElementById("progress-detail");
 const summaryEl = document.getElementById("summary");
-const ownedPlatformsEl = document.getElementById("owned-platforms");
 const resultsEl = document.getElementById("results");
 const controlSideEl = document.getElementById("control-side");
 const controlMainEl = document.getElementById("control-main");
@@ -73,8 +72,10 @@ const I18N = {
     rematchSearchPlaceholder: "Farkli bir isimle JustWatch'ta ara...",
     rematchSearchBtn: "Ara",
     randomModalTitle: "Rastgele Film",
-    ownedTitle: "Zaten sahip oldugun platformlar (varsa isaretle, plan onlari ucretsiz saysin)",
     sidebarTitle: "Abonelik Sirasi",
+    otherPlatformsLabel: "Diger Platformlar",
+    ownedBadge: "Sahipsin",
+    ownedCheckTitle: "Bu platforma zaten sahipsen isaretle",
     statPlatformCount: "platform",
     statNewMovies: "yeni abonelikle film",
     statAlreadyOwned: "zaten sende var",
@@ -139,8 +140,10 @@ const I18N = {
     rematchSearchPlaceholder: "Search JustWatch with a different name...",
     rematchSearchBtn: "Search",
     randomModalTitle: "Random Movie",
-    ownedTitle: "Platforms you already have (check any — the plan treats them as free)",
     sidebarTitle: "Subscription Order",
+    otherPlatformsLabel: "Other Platforms",
+    ownedBadge: "Owned",
+    ownedCheckTitle: "Check if you already have this platform",
     statPlatformCount: "platforms",
     statNewMovies: "movies with new subs",
     statAlreadyOwned: "already have",
@@ -363,11 +366,42 @@ function colorForPlatform(name) {
 // secili kaldigini hatirlar (izlendi/sahip-olunan degisince sifirlanmaz).
 let activePanelKey = null;
 
+// Bir platform "sirada" (monthly_plan icinde) olabilir, ya da baska
+// platformlarda zaten kapsandigi / sahip olundugu icin sirada olmayabilir -
+// bu durumda da kendi kataloguyla ayri bir bilet olarak listelenir, boylece
+// hicbir platform sidebar'dan tamamen kaybolmaz.
 function controlRoomEntries(plan) {
+  const owned = new Set(plan.owned_platforms || []);
+  const numbered = new Set();
   const entries = [];
+
   for (const step of plan.monthly_plan) {
-    entries.push({ key: `platform:${step.platform}`, type: "platform", step });
+    numbered.add(step.platform);
+    entries.push({
+      key: `platform:${step.platform}`,
+      type: "platform",
+      platform: step.platform,
+      numbered: true,
+      owned: owned.has(step.platform),
+      movies: step.movies,
+      order: step.month,
+    });
   }
+
+  const others = Object.keys(plan.platform_movies || {})
+    .filter((p) => !numbered.has(p) && (plan.platform_movies[p] || []).length)
+    .sort((a, b) => plan.platform_movies[b].length - plan.platform_movies[a].length);
+  for (const platform of others) {
+    entries.push({
+      key: `platform:${platform}`,
+      type: "platform",
+      platform,
+      numbered: false,
+      owned: owned.has(platform),
+      movies: plan.platform_movies[platform],
+    });
+  }
+
   if (plan.already_available && plan.already_available.length) {
     entries.push({ key: "already", type: "already" });
   }
@@ -380,18 +414,37 @@ function controlRoomEntries(plan) {
   return entries;
 }
 
+function toggleOwnedPlatform(platform, isOwned) {
+  const current = new Set(getOwnedPlatforms());
+  if (isOwned) current.add(platform);
+  else current.delete(platform);
+  setOwnedPlatforms(Array.from(current));
+  applyAndRender();
+}
+
 function sidebarRow(entry, plan) {
   if (entry.type === "platform") {
+    const leftSlot = entry.owned
+      ? `<span class="hticket-owned-badge">${t("ownedBadge")}</span>`
+      : entry.numbered
+      ? `<span class="hticket-order">${String(entry.order).padStart(2, "0")}</span>`
+      : "<span></span>";
     const el = document.createElement("div");
     el.className = "hticket";
     el.innerHTML = `
       <div class="hticket-top">
-        <span class="hticket-order">${String(entry.step.month).padStart(2, "0")}</span>
-        <span class="platform-count">${t("movieCountLabel", entry.step.movies.length)}</span>
+        ${leftSlot}
+        <span class="platform-count">${t("movieCountLabel", entry.movies.length)}</span>
       </div>
       <div class="hticket-perf"></div>
-      <div class="hticket-bottom"><div class="hticket-name">${entry.step.platform}</div></div>
+      <div class="hticket-bottom">
+        <input type="checkbox" class="hticket-owned-check" title="${t("ownedCheckTitle")}" ${entry.owned ? "checked" : ""} />
+        <span class="hticket-name">${entry.platform}</span>
+      </div>
     `;
+    const checkbox = el.querySelector(".hticket-owned-check");
+    checkbox.addEventListener("click", (e) => e.stopPropagation());
+    checkbox.addEventListener("change", () => toggleOwnedPlatform(entry.platform, checkbox.checked));
     return el;
   }
 
@@ -415,20 +468,24 @@ function panelForEntry(entry, plan) {
   head.className = "platform-header";
 
   if (entry.type === "platform") {
-    const step = entry.step;
+    const badge = entry.owned
+      ? `<span class="platform-month cat-positive">${t("ownedBadge")}</span>`
+      : entry.numbered
+      ? `<span class="platform-month">${t("orderLabel", entry.order)}</span>`
+      : "";
     head.innerHTML = `
-      <span class="platform-month">${t("orderLabel", step.month)}</span>
-      <span class="platform-name">${step.platform}</span>
-      <span class="platform-count">${t("movieCountLabel", step.movies.length)}</span>
+      ${badge}
+      <span class="platform-name">${entry.platform}</span>
+      <span class="platform-count">${t("movieCountLabel", entry.movies.length)}</span>
     `;
     panel.appendChild(head);
     const bar = document.createElement("div");
     bar.className = "platform-bar";
-    bar.style.background = colorForPlatform(step.platform);
+    bar.style.background = colorForPlatform(entry.platform);
     panel.appendChild(bar);
     const grid = document.createElement("div");
     grid.className = "control-grid";
-    for (const movie of step.movies) grid.appendChild(movieCard(movie, step.platform));
+    for (const movie of entry.movies) grid.appendChild(movieCard(movie, entry.platform));
     panel.appendChild(grid);
     return panel;
   }
@@ -618,6 +675,16 @@ function computeDerivedPlan(rawPlan) {
     filmsByPlatform[platform] = uris;
   }
 
+  // Sira almasa da (baska platformlarda zaten kapsandigi veya sahip olundugu
+  // icin), her platform kendi kataloguyla ayri ayri gezilebilsin diye tam
+  // (izlenmemis) film listesini de sakliyoruz.
+  const platformMovies = {};
+  for (const platform of platforms) {
+    platformMovies[platform] = [...filmsByPlatform[platform]]
+      .map((uri) => universe.get(uri))
+      .sort((a, b) => a.title.localeCompare(b.title));
+  }
+
   const alreadySet = new Set();
   const alreadyAvailable = [];
   for (const platform of platforms) {
@@ -676,6 +743,7 @@ function computeDerivedPlan(rawPlan) {
     rent_buy_available: rentBuyMovies,
     owned_platforms: Array.from(owned).sort(),
     watched_movies: watchedMovies,
+    platform_movies: platformMovies,
   };
 }
 
@@ -683,7 +751,6 @@ function applyAndRender() {
   if (!lastRawPlan) return;
   const derived = computeDerivedPlan(lastRawPlan);
   renderSummary(derived);
-  renderOwnedPanel(derived);
   renderRandomPicker(derived);
   renderResults(derived);
   renderFooterNotes(derived);
@@ -937,46 +1004,6 @@ async function confirmMatch(movie, candidate) {
   if (lastCsvText) uploadCsv(lastCsvText);
 }
 
-function renderOwnedPanel(plan) {
-  const platforms = Object.keys(plan.movies_by_platform || {});
-  if (!platforms.length) {
-    ownedPlatformsEl.classList.add("hidden");
-    return;
-  }
-
-  const owned = new Set(plan.owned_platforms || []);
-  ownedPlatformsEl.innerHTML = "";
-
-  const title = document.createElement("summary");
-  title.className = "owned-title";
-  title.textContent = t("ownedTitle");
-  ownedPlatformsEl.appendChild(title);
-
-  const chips = document.createElement("div");
-  chips.className = "owned-chips";
-  for (const platform of platforms) {
-    const label = document.createElement("label");
-    label.className = "owned-chip" + (owned.has(platform) ? " checked" : "");
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = owned.has(platform);
-    checkbox.addEventListener("change", () => {
-      const current = new Set(getOwnedPlatforms());
-      if (checkbox.checked) current.add(platform);
-      else current.delete(platform);
-      setOwnedPlatforms(Array.from(current));
-      label.classList.toggle("checked", checkbox.checked);
-      applyAndRender();
-    });
-
-    label.appendChild(checkbox);
-    label.appendChild(document.createTextNode(platform));
-    chips.appendChild(label);
-  }
-  ownedPlatformsEl.appendChild(chips);
-  ownedPlatformsEl.classList.remove("hidden");
-}
 
 function countNeedsReview(plan) {
   let count = 0;
@@ -1197,10 +1224,18 @@ function renderResults(plan) {
   controlSideEl.appendChild(sideTitle);
 
   let sawPlatform = false;
+  let sawOtherHeader = false;
   let dividerPlaced = false;
   for (const entry of entries) {
     if (entry.type === "platform") {
       sawPlatform = true;
+      if (!entry.numbered && !sawOtherHeader) {
+        const otherTitle = document.createElement("div");
+        otherTitle.className = "control-side-subtitle";
+        otherTitle.textContent = t("otherPlatformsLabel");
+        controlSideEl.appendChild(otherTitle);
+        sawOtherHeader = true;
+      }
     } else if (sawPlatform && !dividerPlaced) {
       const divider = document.createElement("div");
       divider.className = "side-divider";
