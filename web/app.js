@@ -73,7 +73,6 @@ const I18N = {
     rematchSearchBtn: "Ara",
     randomModalTitle: "Rastgele Film",
     sidebarTitle: "Abonelik Sirasi",
-    otherPlatformsLabel: "Diger Platformlar",
     ownedBadge: "Sahipsin",
     ownedCheckTitle: "Bu platforma zaten sahipsen isaretle",
     statPlatformCount: "platform",
@@ -141,7 +140,6 @@ const I18N = {
     rematchSearchBtn: "Search",
     randomModalTitle: "Random Movie",
     sidebarTitle: "Subscription Order",
-    otherPlatformsLabel: "Other Platforms",
     ownedBadge: "Owned",
     ownedCheckTitle: "Check if you already have this platform",
     statPlatformCount: "platforms",
@@ -366,41 +364,28 @@ function colorForPlatform(name) {
 // secili kaldigini hatirlar (izlendi/sahip-olunan degisince sifirlanmaz).
 let activePanelKey = null;
 
-// Bir platform "sirada" (monthly_plan icinde) olabilir, ya da baska
-// platformlarda zaten kapsandigi / sahip olundugu icin sirada olmayabilir -
-// bu durumda da kendi kataloguyla ayri bir bilet olarak listelenir, boylece
-// hicbir platform sidebar'dan tamamen kaybolmaz.
+// Tek, duz bir platform listesi - grup yok. Sira, her platformun toplam
+// (izlenmemis) film sayisina gore sabittir ve sahip-olma isaretlemesinden
+// ETKILENMEZ, boylece bir platformu sahiplendiginde yeri degismez, kaybolmaz.
+// Abonelik onerisi (kacinci sirada abone olunmali) sadece bilet uzerindeki
+// kucuk bir rozet - konumu degil.
 function controlRoomEntries(plan) {
   const owned = new Set(plan.owned_platforms || []);
-  const numbered = new Set();
-  const entries = [];
+  const orderByPlatform = new Map();
+  for (const step of plan.monthly_plan) orderByPlatform.set(step.platform, step.month);
 
-  for (const step of plan.monthly_plan) {
-    numbered.add(step.platform);
-    entries.push({
-      key: `platform:${step.platform}`,
-      type: "platform",
-      platform: step.platform,
-      numbered: true,
-      owned: owned.has(step.platform),
-      movies: step.movies,
-      order: step.month,
-    });
-  }
-
-  const others = Object.keys(plan.platform_movies || {})
-    .filter((p) => !numbered.has(p) && (plan.platform_movies[p] || []).length)
+  const platforms = Object.keys(plan.platform_movies || {})
+    .filter((p) => (plan.platform_movies[p] || []).length)
     .sort((a, b) => plan.platform_movies[b].length - plan.platform_movies[a].length);
-  for (const platform of others) {
-    entries.push({
-      key: `platform:${platform}`,
-      type: "platform",
-      platform,
-      numbered: false,
-      owned: owned.has(platform),
-      movies: plan.platform_movies[platform],
-    });
-  }
+
+  const entries = platforms.map((platform) => ({
+    key: `platform:${platform}`,
+    type: "platform",
+    platform,
+    movies: plan.platform_movies[platform],
+    owned: owned.has(platform),
+    order: orderByPlatform.get(platform) || null,
+  }));
 
   if (plan.already_available && plan.already_available.length) {
     entries.push({ key: "already", type: "already" });
@@ -426,7 +411,7 @@ function sidebarRow(entry, plan) {
   if (entry.type === "platform") {
     const leftSlot = entry.owned
       ? `<span class="hticket-owned-badge">${t("ownedBadge")}</span>`
-      : entry.numbered
+      : entry.order
       ? `<span class="hticket-order">${String(entry.order).padStart(2, "0")}</span>`
       : "<span></span>";
     const el = document.createElement("div");
@@ -470,7 +455,7 @@ function panelForEntry(entry, plan) {
   if (entry.type === "platform") {
     const badge = entry.owned
       ? `<span class="platform-month cat-positive">${t("ownedBadge")}</span>`
-      : entry.numbered
+      : entry.order
       ? `<span class="platform-month">${t("orderLabel", entry.order)}</span>`
       : "";
     head.innerHTML = `
@@ -1224,18 +1209,10 @@ function renderResults(plan) {
   controlSideEl.appendChild(sideTitle);
 
   let sawPlatform = false;
-  let sawOtherHeader = false;
   let dividerPlaced = false;
   for (const entry of entries) {
     if (entry.type === "platform") {
       sawPlatform = true;
-      if (!entry.numbered && !sawOtherHeader) {
-        const otherTitle = document.createElement("div");
-        otherTitle.className = "control-side-subtitle";
-        otherTitle.textContent = t("otherPlatformsLabel");
-        controlSideEl.appendChild(otherTitle);
-        sawOtherHeader = true;
-      }
     } else if (sawPlatform && !dividerPlaced) {
       const divider = document.createElement("div");
       divider.className = "side-divider";

@@ -428,16 +428,6 @@ body::before {
   margin: 4px 6px 14px;
 }
 
-.control-side-subtitle {
-  font-family: var(--f-mono);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-dim);
-  opacity: 0.75;
-  margin: 12px 6px 8px;
-}
-
 .hticket {
   display: flex;
   flex-direction: column;
