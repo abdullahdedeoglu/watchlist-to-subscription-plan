@@ -4,6 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title id="page-title" data-i18n="pageTitle">Watchlist Plani</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
 <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -12,7 +14,7 @@
 
   <header class="top">
     <h1 data-i18n="headerTitle">Watchlist &rarr; Abonelik Plani</h1>
-    <p class="subtitle" data-i18n="subtitle">Letterboxd watchlist CSV'ni surukle, hangi ay hangi platforma abone olman gerektigini gor.</p>
+    <p class="subtitle" data-i18n="subtitle">Letterboxd watchlist CSV'ni surukle, hangi sirada hangi platforma abone olman gerektigini gor.</p>
   </header>
 
   <details class="howto-box" open>
@@ -22,7 +24,8 @@
       <li data-i18n-html="howtoStep2">ZIP'i ac, icinden <code>watchlist.csv</code> dosyasini cikar.</li>
       <li data-i18n-html="howtoStep3">O CSV dosyasini asagidaki alana surukle-birak (ya da alana tikla ve dosyayi sec).</li>
       <li data-i18n-html="howtoStep4">Ust taraftan ulkeni sec &mdash; varsayilan Turkiye. JustWatch'ta o ulkedeki abonelik secenekleri aranir, biraz surebilir.</li>
-      <li data-i18n-html="howtoStep5">Arama bitince, hangi ay hangi platforma abone olursan watchlist'ini en hizli bitirecegini gorursun.</li>
+      <li data-i18n-html="howtoStep5">Arama bitince, hangi sirayla hangi platforma abone olursan watchlist'ini en hizli bitirecegini gorursun.</li>
+      <li data-i18n-html="howtoStep6">Poster'in sag ustundeki <strong>&check;</strong> izledim isaretler, sol ustteki sari <strong>&#9888;</strong> ise eslesmeyi kontrol etmeni onerir.</li>
     </ol>
     <p class="howto-note" data-i18n="howtoNote">Watchlist'in bir kere yuklendikten sonra hatirlanir, sayfayi tekrar actiginda otomatik gelir. Guncellemek icin yeni CSV'yi tekrar surukleyip birakman yeterli.</p>
   </details>
@@ -64,11 +67,11 @@
 
   <section id="summary" class="summary hidden"></section>
 
-  <section id="owned-platforms" class="owned-panel hidden"></section>
-
-  <section id="random-picker" class="owned-panel hidden"></section>
+  <details id="owned-platforms" class="owned-panel hidden" open></details>
 
   <section id="results" class="results hidden"></section>
+
+  <details id="random-picker" class="owned-panel hidden"></details>
 
   <section id="footer-notes" class="footer-notes hidden"></section>
 
