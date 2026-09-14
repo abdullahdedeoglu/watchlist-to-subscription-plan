@@ -53,9 +53,19 @@ def language_for(country: str) -> str:
     return COUNTRIES.get(country, {}).get("lang", "en")
 
 
+EXPECTED_CSV_COLUMNS = ["Date", "Name", "Year", "Letterboxd URI"]
+
+
 def parse_csv_text(text: str) -> list[dict]:
     rows = []
     reader = csv.DictReader(io.StringIO(text))
+    if reader.fieldnames is None or not set(EXPECTED_CSV_COLUMNS) <= set(reader.fieldnames):
+        raise ValueError(
+            "Bu dosya beklenen Letterboxd watchlist formatinda degil "
+            f"(gerekli kolonlar: {', '.join(EXPECTED_CSV_COLUMNS)}). "
+            "Letterboxd'dan Ayarlar -> Import & Export -> Export Data ile "
+            "indirdigin watchlist.csv dosyasini kullandigindan emin ol."
+        )
     for row in reader:
         rows.append(
             {

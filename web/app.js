@@ -42,6 +42,7 @@ const I18N = {
     howtoStep3: "O CSV dosyasini asagidaki alana surukle-birak (ya da alana tikla ve dosyayi sec).",
     howtoStep4: "Ust taraftan ulkeni sec — varsayilan Turkiye. JustWatch'ta o ulkedeki abonelik secenekleri aranir, biraz surebilir.",
     howtoStep5: "Arama bitince, hangi ay hangi platforma abone olursan watchlist'ini en hizli bitirecegini gorursun.",
+    howtoStep6: "Poster'in sag ustundeki <strong>&check;</strong> izledim isaretler, sol ustteki sari <strong>&#9888;</strong> ise eslesmeyi kontrol etmeni onerir.",
     howtoNote: "Watchlist'in bir kere yuklendikten sonra hatirlanir, sayfayi tekrar actiginda otomatik gelir. Guncellemek icin yeni CSV'yi tekrar surukleyip birakman yeterli.",
     devModeLabel: "Gelistirici modu",
     devClearBtn: "Cache'i temizle",
@@ -71,8 +72,8 @@ const I18N = {
     rematchSearchBtn: "Ara",
     randomModalTitle: "Rastgele Film",
     ownedTitle: "Zaten sahip oldugun platformlar (varsa isaretle, plan onlari ucretsiz saysin)",
-    statMonths: "ay",
-    statNewMovies: "yeni abonelikle film",
+    heroSentence: (movies) => `ayda ${movies} film izleyebilirsin`,
+    heroEmpty: "Su an icin yeni bir abonelik gerekmiyor",
     statAlreadyOwned: "zaten sende var",
     statWatched: "izledin",
     statRentBuy: "kirala/satin al ile izlenebilir",
@@ -106,6 +107,7 @@ const I18N = {
     howtoStep3: "Drag that CSV file onto the box below (or click it and choose the file).",
     howtoStep4: "Pick your country above — Turkey by default. Subscription options in that country are searched on JustWatch, which can take a bit.",
     howtoStep5: "Once the search finishes, you'll see which month to subscribe to which platform to get through your watchlist fastest.",
+    howtoStep6: "The <strong>&check;</strong> on a poster's top-right marks it watched; the yellow <strong>&#9888;</strong> on the top-left means the match is worth double-checking.",
     howtoNote: "Your watchlist is remembered after the first upload and loads automatically next time you open the page. To update it, just drag in a new CSV.",
     devModeLabel: "Developer mode",
     devClearBtn: "Clear cache",
@@ -135,8 +137,8 @@ const I18N = {
     rematchSearchBtn: "Search",
     randomModalTitle: "Random Movie",
     ownedTitle: "Platforms you already have (check any — the plan treats them as free)",
-    statMonths: "months",
-    statNewMovies: "movies with new subs",
+    heroSentence: (movies) => `-month plan covers ${movies} movies`,
+    heroEmpty: "No new subscription needed right now",
     statAlreadyOwned: "already have",
     statWatched: "watched",
     statRentBuy: "rent/buy available",
@@ -350,6 +352,15 @@ function colorForPlatform(name) {
   return `hsl(${hue}, 65%, 55%)`;
 }
 
+// Yatay kaydirilan film sirasinin sag kenarina, daha fazla film oldugunu
+// belli eden bir soluklasma (fade) efekti ekler - CSS ::after ile.
+function wrapMovieRow(row) {
+  const wrap = document.createElement("div");
+  wrap.className = "movie-row-wrap";
+  wrap.appendChild(row);
+  return wrap;
+}
+
 ["dragenter", "dragover"].forEach((evt) =>
   dropzone.addEventListener(evt, (e) => {
     e.preventDefault();
@@ -560,7 +571,7 @@ function renderRandomPicker(plan) {
   const selected = new Set(getRandomPoolPlatforms());
   randomPickerEl.innerHTML = "";
 
-  const title = document.createElement("div");
+  const title = document.createElement("summary");
   title.className = "owned-title";
   title.textContent = t("randomPoolLabel");
   randomPickerEl.appendChild(title);
@@ -806,7 +817,7 @@ function renderOwnedPanel(plan) {
   const owned = new Set(plan.owned_platforms || []);
   ownedPlatformsEl.innerHTML = "";
 
-  const title = document.createElement("div");
+  const title = document.createElement("summary");
   title.className = "owned-title";
   title.textContent = t("ownedTitle");
   ownedPlatformsEl.appendChild(title);
@@ -856,9 +867,19 @@ function renderSummary(plan) {
   badge.textContent = t("catalogBadge", countryName);
   summaryEl.appendChild(badge);
 
-  const stats = [
-    { num: plan.monthly_plan.length, label: t("statMonths") },
-    { num: totalMovies, label: t("statNewMovies") },
+  // Hero: asil cevap (kac ayda kac film) buyuk ve on planda; geri kalan
+  // sayilar (izledin, kirala/satin al, vb.) altta daha sakin bir seritte -
+  // kullanici sonucu once gorsun, detaylari sonra.
+  const hero = document.createElement("div");
+  hero.className = "stat-hero";
+  if (totalMovies > 0) {
+    hero.innerHTML = `<span class="stat-hero-num">${plan.monthly_plan.length}</span><span class="stat-hero-text">${t("heroSentence", totalMovies)}</span>`;
+  } else {
+    hero.innerHTML = `<span class="stat-hero-text stat-hero-text-only">${t("heroEmpty")}</span>`;
+  }
+  summaryEl.appendChild(hero);
+
+  const secondaryStats = [
     { num: plan.already_available.length, label: t("statAlreadyOwned") },
     { num: plan.watched_movies.length, label: t("statWatched") },
     { num: plan.rent_buy_available.length, label: t("statRentBuy") },
@@ -866,12 +887,16 @@ function renderSummary(plan) {
     { num: countNeedsReview(plan), label: t("statNeedsReview") },
     { num: plan.total_movies, label: t("statTotal") },
   ];
-  for (const s of stats) {
+  const row = document.createElement("div");
+  row.className = "stat-row-secondary";
+  for (const s of secondaryStats) {
     const div = document.createElement("div");
-    div.className = "summary-stat";
-    div.innerHTML = `<div class="num">${s.num}</div><div class="label">${s.label}</div>`;
-    summaryEl.appendChild(div);
+    div.className = "summary-stat-sm";
+    div.innerHTML = `<span class="num">${s.num}</span><span class="label">${s.label}</span>`;
+    row.appendChild(div);
   }
+  summaryEl.appendChild(row);
+
   summaryEl.classList.remove("hidden");
 }
 
@@ -1050,7 +1075,7 @@ function renderResults(plan) {
         .find((p) => plan.owned_platforms.includes(p));
       row.appendChild(movieCard(movie, hrefPlatform, plan.owned_platforms));
     }
-    box.appendChild(row);
+    box.appendChild(wrapMovieRow(row));
     resultsEl.appendChild(box);
   }
 
@@ -1077,7 +1102,7 @@ function renderResults(plan) {
     const row = document.createElement("div");
     row.className = "movie-row";
     for (const movie of step.movies) row.appendChild(movieCard(movie, step.platform));
-    section.appendChild(row);
+    section.appendChild(wrapMovieRow(row));
 
     resultsEl.appendChild(section);
   }
@@ -1093,7 +1118,7 @@ function renderResults(plan) {
     const row = document.createElement("div");
     row.className = "movie-row";
     for (const movie of plan.rent_buy_available) row.appendChild(rentBuyCard(movie));
-    box.appendChild(row);
+    box.appendChild(wrapMovieRow(row));
     resultsEl.appendChild(box);
   }
 
