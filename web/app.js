@@ -35,13 +35,13 @@ const I18N = {
   tr: {
     pageTitle: "Watchlist Plani",
     headerTitle: "Watchlist → Abonelik Plani",
-    subtitle: "Letterboxd watchlist CSV'ni surukle, hangi ay hangi platforma abone olman gerektigini gor.",
+    subtitle: "Letterboxd watchlist CSV'ni surukle, hangi sirada hangi platforma abone olman gerektigini gor.",
     howtoSummary: "Nasil kullanilir?",
     howtoStep1: "Letterboxd'da <strong>Ayarlar → Import &amp; Export → Export Data</strong> yoluna git ve watchlist'ini disa aktar (bir <code>.zip</code> dosyasi iner).",
     howtoStep2: "ZIP'i ac, icinden <code>watchlist.csv</code> dosyasini cikar.",
     howtoStep3: "O CSV dosyasini asagidaki alana surukle-birak (ya da alana tikla ve dosyayi sec).",
     howtoStep4: "Ust taraftan ulkeni sec — varsayilan Turkiye. JustWatch'ta o ulkedeki abonelik secenekleri aranir, biraz surebilir.",
-    howtoStep5: "Arama bitince, hangi ay hangi platforma abone olursan watchlist'ini en hizli bitirecegini gorursun.",
+    howtoStep5: "Arama bitince, hangi sirayla hangi platforma abone olursan watchlist'ini en hizli bitirecegini gorursun.",
     howtoStep6: "Poster'in sag ustundeki <strong>&check;</strong> izledim isaretler, sol ustteki sari <strong>&#9888;</strong> ise eslesmeyi kontrol etmeni onerir.",
     howtoNote: "Watchlist'in bir kere yuklendikten sonra hatirlanir, sayfayi tekrar actiginda otomatik gelir. Guncellemek icin yeni CSV'yi tekrar surukleyip birakman yeterli.",
     devModeLabel: "Gelistirici modu",
@@ -72,7 +72,7 @@ const I18N = {
     rematchSearchBtn: "Ara",
     randomModalTitle: "Rastgele Film",
     ownedTitle: "Zaten sahip oldugun platformlar (varsa isaretle, plan onlari ucretsiz saysin)",
-    statMonths: "ay",
+    statPlatformCount: "platform",
     statNewMovies: "yeni abonelikle film",
     statAlreadyOwned: "zaten sende var",
     statWatched: "izledin",
@@ -86,7 +86,7 @@ const I18N = {
     justwatchMatchNote: (m) => `JustWatch: ${m.matched_title} (${m.matched_year ?? "?"})`,
     alsoOnPrefix: "ayrica:",
     alreadyAvailableTitle: (platforms, count) => `Zaten izleyebilirsin - ${platforms} (${count} film)`,
-    monthLabel: (n) => `Ay ${n}`,
+    orderLabel: (n) => `${n}. sira`,
     movieCountLabel: (n) => `${n} film`,
     rentBuyTitle: (n) => `Kirala/Satin Al ile Izleyebilirsin (${n})`,
     rentLabel: "Kirala",
@@ -100,13 +100,13 @@ const I18N = {
   en: {
     pageTitle: "Watchlist Plan",
     headerTitle: "Watchlist → Subscription Plan",
-    subtitle: "Drag in your Letterboxd watchlist CSV and see which month to subscribe to which platform.",
+    subtitle: "Drag in your Letterboxd watchlist CSV and see which order to subscribe to which platform.",
     howtoSummary: "How does this work?",
     howtoStep1: "Go to <strong>Settings → Import &amp; Export → Export Data</strong> on Letterboxd and export your watchlist (a <code>.zip</code> file downloads).",
     howtoStep2: "Unzip it and pull out the <code>watchlist.csv</code> file.",
     howtoStep3: "Drag that CSV file onto the box below (or click it and choose the file).",
     howtoStep4: "Pick your country above — Turkey by default. Subscription options in that country are searched on JustWatch, which can take a bit.",
-    howtoStep5: "Once the search finishes, you'll see which month to subscribe to which platform to get through your watchlist fastest.",
+    howtoStep5: "Once the search finishes, you'll see which order to subscribe to which platform to get through your watchlist fastest.",
     howtoStep6: "The <strong>&check;</strong> on a poster's top-right marks it watched; the yellow <strong>&#9888;</strong> on the top-left means the match is worth double-checking.",
     howtoNote: "Your watchlist is remembered after the first upload and loads automatically next time you open the page. To update it, just drag in a new CSV.",
     devModeLabel: "Developer mode",
@@ -137,7 +137,7 @@ const I18N = {
     rematchSearchBtn: "Search",
     randomModalTitle: "Random Movie",
     ownedTitle: "Platforms you already have (check any — the plan treats them as free)",
-    statMonths: "months",
+    statPlatformCount: "platforms",
     statNewMovies: "movies with new subs",
     statAlreadyOwned: "already have",
     statWatched: "watched",
@@ -151,7 +151,7 @@ const I18N = {
     justwatchMatchNote: (m) => `JustWatch: ${m.matched_title} (${m.matched_year ?? "?"})`,
     alsoOnPrefix: "also on:",
     alreadyAvailableTitle: (platforms, count) => `You can already watch these - ${platforms} (${count} movies)`,
-    monthLabel: (n) => `Month ${n}`,
+    orderLabel: (n) => `Step ${n}`,
     movieCountLabel: (n) => `${n} movies`,
     rentBuyTitle: (n) => `Available to Rent/Buy (${n})`,
     rentLabel: "Rent",
@@ -868,7 +868,7 @@ function renderSummary(plan) {
   summaryEl.appendChild(badge);
 
   const secondaryStats = [
-    { num: plan.monthly_plan.length, label: t("statMonths") },
+    { num: plan.monthly_plan.length, label: t("statPlatformCount") },
     { num: totalMovies, label: t("statNewMovies") },
     { num: plan.already_available.length, label: t("statAlreadyOwned") },
     { num: plan.watched_movies.length, label: t("statWatched") },
@@ -1078,7 +1078,7 @@ function renderResults(plan) {
     const header = document.createElement("div");
     header.className = "platform-header";
     header.innerHTML = `
-      <span class="platform-month">${t("monthLabel", step.month)}</span>
+      <span class="platform-month">${t("orderLabel", step.month)}</span>
       <span class="platform-name">${step.platform}</span>
       <span class="platform-count">${t("movieCountLabel", step.movies.length)}</span>
     `;
