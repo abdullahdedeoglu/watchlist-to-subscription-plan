@@ -109,8 +109,10 @@ US sonuclarini etkilemez (ve tam tersi).
 1. CSV'yi okur (`Date, Name, Year, Letterboxd URI` kolonlari).
 2. `justwatch_cache.json` icindeki cache'e bakar. Secilen ulke icin
    cache'te olmayan (yeni eklenen, ya da daha once baska bir ulke icin
-   aranmis) filmleri tespit edip **sadece onlari** JustWatch'ta arar
-   (istek basina 0.5 saniye bekleyerek). Zaten o ulke icin cache'te olan
+   aranmis) filmleri tespit edip **sadece onlari** JustWatch'ta arar - ayni
+   anda en fazla 6 istek paralel gider (ag gecikmesi darbogaz oldugu icin
+   bu onemli hiz kazandirir), ayni baslik+yil birden fazla satirda geciyorsa
+   tek arama yapilip sonuc hepsine uygulanir. Zaten o ulke icin cache'te olan
    filmler icin tekrar istek atmaz.
 3. Her film icin arama sonuclarindan yil eslesen kaydi secer; eslesme yoksa
    ilk sonucu kullanir. Sadece `FLATRATE` (abonelik) tipi teklifleri
