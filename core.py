@@ -7,7 +7,8 @@ Hem sync.py (CLI) hem de server.py (web arayuzu) bu modulu kullanir.
 import csv
 import io
 import json
-import time
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from simplejustwatchapi.justwatch import search
@@ -15,7 +16,11 @@ from simplejustwatchapi.justwatch import search
 CACHE_FILE = Path("justwatch_cache.json")
 DEFAULT_COUNTRY = "TR"
 SEARCH_COUNT = 5
-REQUEST_DELAY_SECONDS = 0.5
+# Ayni anda JustWatch'a atilacak istek sayisi. Ag gecikmesi tek tek istekleri
+# yavaslatiyordu, bu da darbogazdi (CPU degil). Cok yuksek bir deger resmi
+# olmayan API'yi tetikleyip rate-limit/IP engeline yol acabilir; 6 makul bir
+# orta nokta - istersen dusur/yukselt.
+MAX_CONCURRENT_REQUESTS = 6
 
 # Desteklenen ulkeler: kod -> {goruntulenen isim (tr/en), JustWatch dil kodu}.
 # Ulke isimleri arayuz dili tr/en icin ayri ayri tutulur; yeni bir arayuz dili
@@ -209,21 +214,47 @@ def sync_cache(
     cache_file: Path = CACHE_FILE,
     progress=None,
 ) -> tuple[dict, list[dict]]:
-    """progress: opsiyonel callback(done, total, title) - her yeni/guncellenen film sonrasi cagirilir."""
+    """progress: opsiyonel callback(done, total, title) - her yeni/guncellenen film sonrasi cagirilir.
+
+    Aramalar MAX_CONCURRENT_REQUESTS kadar paralel thread'de yapilir (ag
+    gecikmesi darbogaz oldugu icin, CPU degil). Ayni (baslik, yil) icin
+    watchlist'te birden fazla satir varsa tek arama yapilir, sonuc hepsine
+    uygulanir. Cache'e yazma ve hata biriktirme sadece ana thread'de olur,
+    bu yuzden kilit gerekmiyor - sadece ilerleme sayaci paylasildigi icin
+    kilitli.
+    """
     current_uris = {row["uri"] for row in rows}
     todo_rows = [row for row in rows if needs_lookup(cache, row["uri"], country)]
     errors = []
 
-    for i, row in enumerate(todo_rows, 1):
-        result, error = search_movie(row["title"], row["year"], country, language)
-        if result is not None:
-            entry = cache.setdefault(row["uri"], {"title": row["title"], "year": row["year"], "by_country": {}})
-            entry["by_country"][country] = result
-        else:
-            errors.append({"title": row["title"], "year": row["year"], "uri": row["uri"], "error": error})
-        if progress:
-            progress(i, len(todo_rows), row["title"])
-        time.sleep(REQUEST_DELAY_SECONDS)
+    queries: dict[tuple[str, str], list[dict]] = {}
+    for row in todo_rows:
+        queries.setdefault((row["title"], row["year"]), []).append(row)
+
+    total = len(queries)
+    done_count = 0
+    progress_lock = threading.Lock()
+
+    def run_one(key: tuple[str, str]):
+        title, year = key
+        result, error = search_movie(title, year, country, language)
+        nonlocal done_count
+        with progress_lock:
+            done_count += 1
+            if progress:
+                progress(done_count, total, title)
+        return key, result, error
+
+    with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_REQUESTS) as executor:
+        futures = [executor.submit(run_one, key) for key in queries]
+        for future in as_completed(futures):
+            key, result, error = future.result()
+            for row in queries[key]:
+                if result is not None:
+                    entry = cache.setdefault(row["uri"], {"title": row["title"], "year": row["year"], "by_country": {}})
+                    entry["by_country"][country] = dict(result)
+                else:
+                    errors.append({"title": row["title"], "year": row["year"], "uri": row["uri"], "error": error})
 
     removed = [
         {"uri": uri, "title": data.get("title"), "year": data.get("year")}
