@@ -326,9 +326,9 @@ body::before {
 }
 
 .stat-row-secondary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 22px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 16px 22px;
 }
 
 .summary-stat-sm {
@@ -491,7 +491,39 @@ body::before {
   gap: 7px;
 }
 
-.hticket-owned-check { margin: 0; accent-color: var(--accent); cursor: pointer; flex: none; }
+.hticket-owned-check {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  width: 15px;
+  height: 15px;
+  flex: none;
+  position: relative;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-sunken);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.hticket-owned-check:hover { border-color: var(--accent); }
+
+.hticket-owned-check:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.hticket-owned-check:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 7px;
+  border: solid var(--accent-ink);
+  border-width: 0 2px 2px 0;
+  transform: rotate(43deg);
+}
 
 .hticket-name { font-size: 13px; font-weight: 600; }
 

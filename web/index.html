@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title id="page-title" data-i18n="pageTitle">Watchlist Plani</title>
+<title id="page-title" data-i18n="pageTitle">Watchlist Planı</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
 <link rel="stylesheet" href="/style.css" />
@@ -13,38 +13,38 @@
 <div class="page">
 
   <header class="top">
-    <h1 data-i18n="headerTitle">Watchlist &rarr; Abonelik Plani</h1>
-    <p class="subtitle" data-i18n="subtitle">Letterboxd watchlist CSV'ni surukle, hangi sirada hangi platforma abone olman gerektigini gor.</p>
+    <h1 data-i18n="headerTitle">Watchlist &rarr; Abonelik Planı</h1>
+    <p class="subtitle" data-i18n="subtitle">Letterboxd watchlist CSV'ni sürükle, hangi sırada hangi platforma abone olman gerektiğini gör.</p>
   </header>
 
   <details class="howto-box" open>
-    <summary data-i18n="howtoSummary">Nasil kullanilir?</summary>
+    <summary data-i18n="howtoSummary">Nasıl kullanılır?</summary>
     <ol class="howto-steps">
-      <li data-i18n-html="howtoStep1">Letterboxd'da <strong>Ayarlar &rarr; Import &amp; Export &rarr; Export Data</strong> yoluna git ve watchlist'ini disa aktar (bir <code>.zip</code> dosyasi iner).</li>
-      <li data-i18n-html="howtoStep2">ZIP'i ac, icinden <code>watchlist.csv</code> dosyasini cikar.</li>
-      <li data-i18n-html="howtoStep3">O CSV dosyasini asagidaki alana surukle-birak (ya da alana tikla ve dosyayi sec).</li>
-      <li data-i18n-html="howtoStep4">Ust taraftan ulkeni sec &mdash; varsayilan Turkiye. JustWatch'ta o ulkedeki abonelik secenekleri aranir, biraz surebilir.</li>
-      <li data-i18n-html="howtoStep5">Arama bitince, hangi sirayla hangi platforma abone olursan watchlist'ini en hizli bitirecegini gorursun.</li>
-      <li data-i18n-html="howtoStep6">Poster'in sag ustundeki <strong>&check;</strong> izledim isaretler, sol ustteki sari <strong>&#9888;</strong> ise eslesmeyi kontrol etmeni onerir.</li>
+      <li data-i18n-html="howtoStep1">Letterboxd'da <strong>Ayarlar &rarr; Import &amp; Export &rarr; Export Data</strong> yoluna git ve watchlist'ini dışa aktar (bir <code>.zip</code> dosyası iner).</li>
+      <li data-i18n-html="howtoStep2">ZIP'i aç, içinden <code>watchlist.csv</code> dosyasını çıkar.</li>
+      <li data-i18n-html="howtoStep3">O CSV dosyasını aşağıdaki alana sürükle-bırak (ya da alana tıkla ve dosyayı seç).</li>
+      <li data-i18n-html="howtoStep4">Üst taraftan ülkeni seç &mdash; varsayılan Türkiye. JustWatch'ta o ülkedeki abonelik seçenekleri aranır, biraz sürebilir.</li>
+      <li data-i18n-html="howtoStep5">Arama bitince, hangi sırayla hangi platforma abone olursan watchlist'ini en hızlı bitireceğini görürsün.</li>
+      <li data-i18n-html="howtoStep6">Poster'in sağ üstündeki <strong>&check;</strong> izledim işaretler, sol üstteki sarı <strong>&#9888;</strong> ise eşleşmeyi kontrol etmeni önerir.</li>
     </ol>
-    <p class="howto-note" data-i18n="howtoNote">Watchlist'in bir kere yuklendikten sonra hatirlanir, sayfayi tekrar actiginda otomatik gelir. Guncellemek icin yeni CSV'yi tekrar surukleyip birakman yeterli.</p>
+    <p class="howto-note" data-i18n="howtoNote">Watchlist'in bir kere yüklendikten sonra hatırlanır, sayfayı tekrar açtığında otomatik gelir. Güncellemek için yeni CSV'yi tekrar sürükleyip bırakman yeterli.</p>
   </details>
 
   <!-- GELISTIRME ARACI - sadece ?dev=1 ile gorunur. Gelistirme bitince bu
        bolumu, app.js'teki dev-tools kodunu ve server.py'daki /api/clear-cache
        endpoint'ini birlikte kaldir. -->
   <div id="dev-tools" class="dev-tools hidden">
-    <span class="dev-tools-label" data-i18n="devModeLabel">Gelistirici modu</span>
+    <span class="dev-tools-label" data-i18n="devModeLabel">Geliştirici modu</span>
     <button id="dev-clear-cache-btn" class="dev-clear-btn" type="button" data-i18n="devClearBtn">Cache'i temizle</button>
   </div>
 
   <div class="country-row">
     <label for="lang-select" data-i18n="langLabel">Dil</label>
     <select id="lang-select">
-      <option value="tr">Turkce</option>
+      <option value="tr">Türkçe</option>
       <option value="en">English</option>
     </select>
-    <label for="country-select" data-i18n="countryLabel">Ulke</label>
+    <label for="country-select" data-i18n="countryLabel">Ülke</label>
     <select id="country-select"></select>
   </div>
 
@@ -52,13 +52,13 @@
     <input type="file" id="file-input" accept=".csv" hidden />
     <div class="dropzone-inner">
       <div class="dropzone-icon">&#127916;</div>
-      <div class="dropzone-text" data-i18n="dropzoneText">CSV dosyasini buraya surukle</div>
-      <div class="dropzone-sub" data-i18n="dropzoneSub">ya da tikla ve sec</div>
+      <div class="dropzone-text" data-i18n="dropzoneText">CSV dosyasını buraya sürükle</div>
+      <div class="dropzone-sub" data-i18n="dropzoneSub">ya da tıkla ve seç</div>
     </div>
   </section>
 
   <section id="progress" class="progress-panel hidden">
-    <div class="progress-title" data-i18n="progressTitle">JustWatch'ta araniyor&hellip;</div>
+    <div class="progress-title" data-i18n="progressTitle">JustWatch'ta aranıyor&hellip;</div>
     <div class="progress-bar-track">
       <div id="progress-bar-fill" class="progress-bar-fill"></div>
     </div>
@@ -87,7 +87,7 @@
       <button id="rematch-close" class="modal-close" type="button">&times;</button>
     </div>
     <div class="rematch-search-row">
-      <input type="text" id="rematch-search-input" class="rematch-search-input" data-i18n-placeholder="rematchSearchPlaceholder" placeholder="Farkli bir isimle JustWatch'ta ara..." />
+      <input type="text" id="rematch-search-input" class="rematch-search-input" data-i18n-placeholder="rematchSearchPlaceholder" placeholder="Farklı bir isimle JustWatch'ta ara..." />
       <button id="rematch-search-btn" class="rematch-search-btn" type="button" data-i18n="rematchSearchBtn">Ara</button>
     </div>
     <div id="rematch-body" class="modal-body"></div>
