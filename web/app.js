@@ -7,6 +7,7 @@ const progressFill = document.getElementById("progress-bar-fill");
 const progressDetail = document.getElementById("progress-detail");
 const summaryEl = document.getElementById("summary");
 const ownedPlatformsEl = document.getElementById("owned-platforms");
+const quickNavEl = document.getElementById("quick-nav");
 const resultsEl = document.getElementById("results");
 const footerEl = document.getElementById("footer-notes");
 const rematchModal = document.getElementById("rematch-modal");
@@ -361,6 +362,46 @@ function wrapMovieRow(row) {
   return wrap;
 }
 
+function slugify(text) {
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "x";
+}
+
+// Sonuclar sayfa boyu uzun bir tek sutuna sigmiyor - platform bolumleri artik
+// yan yana bir izgarada, bu da hangi bolumun nerede oldugunu bulmayi
+// zorlastirabilir. Bu yuzden sonuclarin ustune, tiklaninca ilgili bolume
+// atlayan kisa bir "hizli gezinme" seridi ekliyoruz.
+function renderQuickNav(plan) {
+  const items = [];
+  if (plan.already_available && plan.already_available.length) {
+    items.push({ id: "sec-already", label: t("statAlreadyOwned"), count: plan.already_available.length });
+  }
+  for (const step of plan.monthly_plan) {
+    items.push({ id: `sec-platform-${slugify(step.platform)}`, label: step.platform, count: step.movies.length });
+  }
+  if (plan.rent_buy_available && plan.rent_buy_available.length) {
+    items.push({ id: "sec-rentbuy", label: t("statRentBuy"), count: plan.rent_buy_available.length });
+  }
+  if (plan.not_available_anywhere.length) {
+    items.push({ id: "sec-nowhere", label: t("statNowhere"), count: plan.not_available_anywhere.length });
+  }
+
+  if (items.length < 2) {
+    quickNavEl.classList.add("hidden");
+    quickNavEl.innerHTML = "";
+    return;
+  }
+
+  quickNavEl.innerHTML = "";
+  for (const item of items) {
+    const a = document.createElement("a");
+    a.className = "quick-nav-pill";
+    a.href = `#${item.id}`;
+    a.textContent = `${item.label} · ${item.count}`;
+    quickNavEl.appendChild(a);
+  }
+  quickNavEl.classList.remove("hidden");
+}
+
 ["dragenter", "dragover"].forEach((evt) =>
   dropzone.addEventListener(evt, (e) => {
     e.preventDefault();
@@ -554,6 +595,7 @@ function applyAndRender() {
   const derived = computeDerivedPlan(lastRawPlan);
   renderSummary(derived);
   renderOwnedPanel(derived);
+  renderQuickNav(derived);
   renderRandomPicker(derived);
   renderResults(derived);
   renderFooterNotes(derived);
@@ -1051,6 +1093,7 @@ function renderResults(plan) {
 
   if (plan.already_available && plan.already_available.length) {
     const box = document.createElement("div");
+    box.id = "sec-already";
     box.className = "already-section";
     const title = document.createElement("div");
     title.className = "already-title";
@@ -1069,36 +1112,47 @@ function renderResults(plan) {
     resultsEl.appendChild(box);
   }
 
-  for (const step of plan.monthly_plan) {
-    const color = colorForPlatform(step.platform);
+  if (plan.monthly_plan.length) {
+    // Platform bolumleri artik tek bir uzun sutun yerine, genis ekranlarda
+    // yan yana bir izgarada - sayfa boyu asagi kaydirma ihtiyacini azaltir.
+    const grid = document.createElement("div");
+    grid.className = "plan-grid";
 
-    const section = document.createElement("section");
-    section.className = "platform-section";
+    for (const step of plan.monthly_plan) {
+      const color = colorForPlatform(step.platform);
 
-    const header = document.createElement("div");
-    header.className = "platform-header";
-    header.innerHTML = `
-      <span class="platform-month">${t("orderLabel", step.month)}</span>
-      <span class="platform-name">${step.platform}</span>
-      <span class="platform-count">${t("movieCountLabel", step.movies.length)}</span>
-    `;
-    section.appendChild(header);
+      const section = document.createElement("section");
+      section.id = `sec-platform-${slugify(step.platform)}`;
+      section.className = "platform-section";
 
-    const bar = document.createElement("div");
-    bar.className = "platform-bar";
-    bar.style.background = color;
-    section.appendChild(bar);
+      const header = document.createElement("div");
+      header.className = "platform-header";
+      header.innerHTML = `
+        <span class="platform-month">${t("orderLabel", step.month)}</span>
+        <span class="platform-name">${step.platform}</span>
+        <span class="platform-count">${t("movieCountLabel", step.movies.length)}</span>
+      `;
+      section.appendChild(header);
 
-    const row = document.createElement("div");
-    row.className = "movie-row";
-    for (const movie of step.movies) row.appendChild(movieCard(movie, step.platform));
-    section.appendChild(wrapMovieRow(row));
+      const bar = document.createElement("div");
+      bar.className = "platform-bar";
+      bar.style.background = color;
+      section.appendChild(bar);
 
-    resultsEl.appendChild(section);
+      const row = document.createElement("div");
+      row.className = "movie-row";
+      for (const movie of step.movies) row.appendChild(movieCard(movie, step.platform));
+      section.appendChild(wrapMovieRow(row));
+
+      grid.appendChild(section);
+    }
+
+    resultsEl.appendChild(grid);
   }
 
   if (plan.rent_buy_available && plan.rent_buy_available.length) {
     const box = document.createElement("div");
+    box.id = "sec-rentbuy";
     box.className = "rentbuy-section";
     const title = document.createElement("div");
     title.className = "rentbuy-title";
@@ -1114,6 +1168,7 @@ function renderResults(plan) {
 
   if (plan.not_available_anywhere.length) {
     const box = document.createElement("div");
+    box.id = "sec-nowhere";
     box.className = "nowhere-section";
     const title = document.createElement("div");
     title.className = "nowhere-title";
