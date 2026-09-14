@@ -325,35 +325,6 @@ body::before {
   margin-bottom: 14px;
 }
 
-.stat-hero {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding-bottom: 20px;
-  margin-bottom: 18px;
-  border-bottom: 1px solid var(--border);
-}
-
-.stat-hero-num {
-  font-family: var(--f-display);
-  font-style: italic;
-  font-weight: 560;
-  font-size: 56px;
-  line-height: 1;
-  color: var(--accent);
-}
-
-.stat-hero-text {
-  font-family: var(--f-display);
-  font-style: italic;
-  font-size: 22px;
-  color: var(--text);
-  line-height: 1.2;
-}
-
-.stat-hero-text-only { font-size: 20px; }
-
 .stat-row-secondary {
   display: flex;
   flex-wrap: wrap;
@@ -934,8 +905,6 @@ body::before {
 @media (max-width: 560px) {
   .page { padding: 28px 16px 60px; }
   .top h1 { font-size: 25px; }
-  .stat-hero-num { font-size: 42px; }
-  .stat-hero-text { font-size: 18px; }
   .movie-card, .movie-poster { width: 108px; }
   .movie-poster { height: 158px; }
   .stat-row-secondary { gap: 16px 22px; }

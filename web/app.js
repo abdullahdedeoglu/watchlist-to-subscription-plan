@@ -72,8 +72,8 @@ const I18N = {
     rematchSearchBtn: "Ara",
     randomModalTitle: "Rastgele Film",
     ownedTitle: "Zaten sahip oldugun platformlar (varsa isaretle, plan onlari ucretsiz saysin)",
-    heroSentence: (movies) => `ayda ${movies} film izleyebilirsin`,
-    heroEmpty: "Su an icin yeni bir abonelik gerekmiyor",
+    statMonths: "ay",
+    statNewMovies: "yeni abonelikle film",
     statAlreadyOwned: "zaten sende var",
     statWatched: "izledin",
     statRentBuy: "kirala/satin al ile izlenebilir",
@@ -137,8 +137,8 @@ const I18N = {
     rematchSearchBtn: "Search",
     randomModalTitle: "Random Movie",
     ownedTitle: "Platforms you already have (check any — the plan treats them as free)",
-    heroSentence: (movies) => `-month plan covers ${movies} movies`,
-    heroEmpty: "No new subscription needed right now",
+    statMonths: "months",
+    statNewMovies: "movies with new subs",
     statAlreadyOwned: "already have",
     statWatched: "watched",
     statRentBuy: "rent/buy available",
@@ -867,19 +867,9 @@ function renderSummary(plan) {
   badge.textContent = t("catalogBadge", countryName);
   summaryEl.appendChild(badge);
 
-  // Hero: asil cevap (kac ayda kac film) buyuk ve on planda; geri kalan
-  // sayilar (izledin, kirala/satin al, vb.) altta daha sakin bir seritte -
-  // kullanici sonucu once gorsun, detaylari sonra.
-  const hero = document.createElement("div");
-  hero.className = "stat-hero";
-  if (totalMovies > 0) {
-    hero.innerHTML = `<span class="stat-hero-num">${plan.monthly_plan.length}</span><span class="stat-hero-text">${t("heroSentence", totalMovies)}</span>`;
-  } else {
-    hero.innerHTML = `<span class="stat-hero-text stat-hero-text-only">${t("heroEmpty")}</span>`;
-  }
-  summaryEl.appendChild(hero);
-
   const secondaryStats = [
+    { num: plan.monthly_plan.length, label: t("statMonths") },
+    { num: totalMovies, label: t("statNewMovies") },
     { num: plan.already_available.length, label: t("statAlreadyOwned") },
     { num: plan.watched_movies.length, label: t("statWatched") },
     { num: plan.rent_buy_available.length, label: t("statRentBuy") },
