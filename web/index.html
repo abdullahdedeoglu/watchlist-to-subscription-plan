@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Watchlist Plani</title>
+<title id="page-title" data-i18n="pageTitle">Watchlist Plani</title>
 <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -11,12 +11,37 @@
 <div class="page">
 
   <header class="top">
-    <h1>Watchlist &rarr; Abonelik Plani</h1>
-    <p class="subtitle">Letterboxd watchlist CSV'ni surukle, hangi ay hangi platforma abone olman gerektigini gor.</p>
+    <h1 data-i18n="headerTitle">Watchlist &rarr; Abonelik Plani</h1>
+    <p class="subtitle" data-i18n="subtitle">Letterboxd watchlist CSV'ni surukle, hangi ay hangi platforma abone olman gerektigini gor.</p>
   </header>
 
+  <details class="howto-box" open>
+    <summary data-i18n="howtoSummary">Nasil kullanilir?</summary>
+    <ol class="howto-steps">
+      <li data-i18n-html="howtoStep1">Letterboxd'da <strong>Ayarlar &rarr; Import &amp; Export &rarr; Export Data</strong> yoluna git ve watchlist'ini disa aktar (bir <code>.zip</code> dosyasi iner).</li>
+      <li data-i18n-html="howtoStep2">ZIP'i ac, icinden <code>watchlist.csv</code> dosyasini cikar.</li>
+      <li data-i18n-html="howtoStep3">O CSV dosyasini asagidaki alana surukle-birak (ya da alana tikla ve dosyayi sec).</li>
+      <li data-i18n-html="howtoStep4">Ust taraftan ulkeni sec &mdash; varsayilan Turkiye. JustWatch'ta o ulkedeki abonelik secenekleri aranir, biraz surebilir.</li>
+      <li data-i18n-html="howtoStep5">Arama bitince, hangi ay hangi platforma abone olursan watchlist'ini en hizli bitirecegini gorursun.</li>
+    </ol>
+    <p class="howto-note" data-i18n="howtoNote">Watchlist'in bir kere yuklendikten sonra hatirlanir, sayfayi tekrar actiginda otomatik gelir. Guncellemek icin yeni CSV'yi tekrar surukleyip birakman yeterli.</p>
+  </details>
+
+  <!-- GELISTIRME ARACI - sadece ?dev=1 ile gorunur. Gelistirme bitince bu
+       bolumu, app.js'teki dev-tools kodunu ve server.py'daki /api/clear-cache
+       endpoint'ini birlikte kaldir. -->
+  <div id="dev-tools" class="dev-tools hidden">
+    <span class="dev-tools-label" data-i18n="devModeLabel">Gelistirici modu</span>
+    <button id="dev-clear-cache-btn" class="dev-clear-btn" type="button" data-i18n="devClearBtn">Cache'i temizle</button>
+  </div>
+
   <div class="country-row">
-    <label for="country-select">Ulke</label>
+    <label for="lang-select" data-i18n="langLabel">Dil</label>
+    <select id="lang-select">
+      <option value="tr">Turkce</option>
+      <option value="en">English</option>
+    </select>
+    <label for="country-select" data-i18n="countryLabel">Ulke</label>
     <select id="country-select"></select>
   </div>
 
@@ -24,13 +49,13 @@
     <input type="file" id="file-input" accept=".csv" hidden />
     <div class="dropzone-inner">
       <div class="dropzone-icon">&#127916;</div>
-      <div class="dropzone-text">CSV dosyasini buraya surukle</div>
-      <div class="dropzone-sub">ya da tikla ve sec</div>
+      <div class="dropzone-text" data-i18n="dropzoneText">CSV dosyasini buraya surukle</div>
+      <div class="dropzone-sub" data-i18n="dropzoneSub">ya da tikla ve sec</div>
     </div>
   </section>
 
   <section id="progress" class="progress-panel hidden">
-    <div class="progress-title">JustWatch'ta araniyor&hellip;</div>
+    <div class="progress-title" data-i18n="progressTitle">JustWatch'ta araniyor&hellip;</div>
     <div class="progress-bar-track">
       <div id="progress-bar-fill" class="progress-bar-fill"></div>
     </div>
@@ -55,6 +80,10 @@
       <div id="rematch-title" class="modal-title"></div>
       <button id="rematch-close" class="modal-close" type="button">&times;</button>
     </div>
+    <div class="rematch-search-row">
+      <input type="text" id="rematch-search-input" class="rematch-search-input" data-i18n-placeholder="rematchSearchPlaceholder" placeholder="Farkli bir isimle JustWatch'ta ara..." />
+      <button id="rematch-search-btn" class="rematch-search-btn" type="button" data-i18n="rematchSearchBtn">Ara</button>
+    </div>
     <div id="rematch-body" class="modal-body"></div>
   </div>
 </div>
@@ -62,7 +91,7 @@
 <div id="random-modal" class="modal-overlay hidden">
   <div class="modal-box">
     <div class="modal-header">
-      <div class="modal-title">Rastgele Film</div>
+      <div class="modal-title" data-i18n="randomModalTitle">Rastgele Film</div>
       <button id="random-close" class="modal-close" type="button">&times;</button>
     </div>
     <div id="random-body" class="modal-body"></div>

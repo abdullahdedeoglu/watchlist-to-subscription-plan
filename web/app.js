@@ -1,5 +1,6 @@
 const dropzone = document.getElementById("dropzone");
 const fileInput = document.getElementById("file-input");
+const langSelect = document.getElementById("lang-select");
 const countrySelect = document.getElementById("country-select");
 const progressPanel = document.getElementById("progress");
 const progressFill = document.getElementById("progress-bar-fill");
@@ -12,6 +13,8 @@ const rematchModal = document.getElementById("rematch-modal");
 const rematchTitle = document.getElementById("rematch-title");
 const rematchClose = document.getElementById("rematch-close");
 const rematchBody = document.getElementById("rematch-body");
+const rematchSearchInput = document.getElementById("rematch-search-input");
+const rematchSearchBtn = document.getElementById("rematch-search-btn");
 const randomPickerEl = document.getElementById("random-picker");
 const randomModal = document.getElementById("random-modal");
 const randomClose = document.getElementById("random-close");
@@ -21,6 +24,174 @@ const OWNED_STORAGE_KEY = "watchlist-owned-platforms";
 const WATCHED_STORAGE_KEY = "watchlist-watched";
 const COUNTRY_STORAGE_KEY = "watchlist-country";
 const RANDOM_POOL_STORAGE_KEY = "watchlist-random-pool";
+const LANG_STORAGE_KEY = "watchlist-lang";
+const LANG_MANUAL_STORAGE_KEY = "watchlist-lang-manual";
+
+// --- Cok dilli metinler ---
+// Yeni bir dil eklerken: asagidaki her anahtara o dilde bir deger ekle,
+// lang-select'e <option> ekle, ve gerekirse COUNTRY_DEFAULT_LANG'a
+// hangi ulkelerin o dili varsayilan aldigini ekle.
+const I18N = {
+  tr: {
+    pageTitle: "Watchlist Plani",
+    headerTitle: "Watchlist → Abonelik Plani",
+    subtitle: "Letterboxd watchlist CSV'ni surukle, hangi ay hangi platforma abone olman gerektigini gor.",
+    howtoSummary: "Nasil kullanilir?",
+    howtoStep1: "Letterboxd'da <strong>Ayarlar → Import &amp; Export → Export Data</strong> yoluna git ve watchlist'ini disa aktar (bir <code>.zip</code> dosyasi iner).",
+    howtoStep2: "ZIP'i ac, icinden <code>watchlist.csv</code> dosyasini cikar.",
+    howtoStep3: "O CSV dosyasini asagidaki alana surukle-birak (ya da alana tikla ve dosyayi sec).",
+    howtoStep4: "Ust taraftan ulkeni sec — varsayilan Turkiye. JustWatch'ta o ulkedeki abonelik secenekleri aranir, biraz surebilir.",
+    howtoStep5: "Arama bitince, hangi ay hangi platforma abone olursan watchlist'ini en hizli bitirecegini gorursun.",
+    howtoNote: "Watchlist'in bir kere yuklendikten sonra hatirlanir, sayfayi tekrar actiginda otomatik gelir. Guncellemek icin yeni CSV'yi tekrar surukleyip birakman yeterli.",
+    devModeLabel: "Gelistirici modu",
+    devClearBtn: "Cache'i temizle",
+    devClearBtnWorking: "Temizleniyor...",
+    devClearConfirm: "JustWatch eslestirme cache'i tamamen silinsin mi? Bir sonraki aramada tum filmler sifirdan aranacak.",
+    countryLabel: "Ulke",
+    langLabel: "Dil",
+    dropzoneText: "CSV dosyasini buraya surukle",
+    dropzoneSub: "ya da tikla ve sec",
+    progressTitle: "JustWatch'ta araniyor…",
+    progressLoading: "Yukleniyor...",
+    progressCacheCheck: "Cache kontrol ediliyor...",
+    progressError: "Hata: ",
+    fileTypeAlert: "Lutfen bir .csv dosyasi sec.",
+    randomPoolLabel: "Rastgele film onerisi hangi platformlar arasindan secilsin? (bos birakirsan tum watchlist)",
+    randomPickBtn: "🎲 Rastgele film sec",
+    randomEmptyPool: "Bu havuzda secilebilecek film kalmadi - baska platform sec ya da izlenenleri geri al.",
+    randomNoOffers: "Bu film hicbir platformda abonelikle bulunamadi.",
+    randomRerollBtn: "🎲 Baska film",
+    markWatchedBtn: "Izledim isaretle",
+    rematchTitlePrefix: "Eslesmeyi kontrol et",
+    rematchSubtitle: (m) => `${m.title} (${m.year}) icin JustWatch sonuclari`,
+    rematchSearching: "Araniyor...",
+    rematchNoResults: "Sonuc bulunamadi. Farkli bir isimle tekrar dene.",
+    rematchSaving: "Kaydediliyor...",
+    rematchSearchPlaceholder: "Farkli bir isimle JustWatch'ta ara...",
+    rematchSearchBtn: "Ara",
+    randomModalTitle: "Rastgele Film",
+    ownedTitle: "Zaten sahip oldugun platformlar (varsa isaretle, plan onlari ucretsiz saysin)",
+    statMonths: "ay",
+    statNewMovies: "yeni abonelikle film",
+    statAlreadyOwned: "zaten sende var",
+    statWatched: "izledin",
+    statNowhere: "hicbir yerde yok",
+    statNeedsReview: "eslesme kontrolu onerilir",
+    statTotal: "toplam watchlist",
+    catalogBadge: (name) => `${name} katalogu`,
+    watchedToggleTitle: "Izledim isaretle",
+    reviewToggleTitle: "Eslesme yanlis olabilir, kontrol et",
+    justwatchMatchNote: (m) => `JustWatch: ${m.matched_title} (${m.matched_year ?? "?"})`,
+    alsoOnPrefix: "ayrica:",
+    alreadyAvailableTitle: (platforms, count) => `Zaten izleyebilirsin - ${platforms} (${count} film)`,
+    monthLabel: (n) => `Ay ${n}`,
+    movieCountLabel: (n) => `${n} film`,
+    nowhereTitle: (n) => `Hicbir platformda abonelikle bulunamadi (${n})`,
+    watchedListTitle: (n) => `Izledigin filmler (${n})`,
+    undoBtn: "geri al",
+    removedTitle: (n) => `Watchlist'ten cikmis (${n})`,
+    errorsTitle: (n) => `Eslestirilemeyen filmler (${n})`,
+  },
+  en: {
+    pageTitle: "Watchlist Plan",
+    headerTitle: "Watchlist → Subscription Plan",
+    subtitle: "Drag in your Letterboxd watchlist CSV and see which month to subscribe to which platform.",
+    howtoSummary: "How does this work?",
+    howtoStep1: "Go to <strong>Settings → Import &amp; Export → Export Data</strong> on Letterboxd and export your watchlist (a <code>.zip</code> file downloads).",
+    howtoStep2: "Unzip it and pull out the <code>watchlist.csv</code> file.",
+    howtoStep3: "Drag that CSV file onto the box below (or click it and choose the file).",
+    howtoStep4: "Pick your country above — Turkey by default. Subscription options in that country are searched on JustWatch, which can take a bit.",
+    howtoStep5: "Once the search finishes, you'll see which month to subscribe to which platform to get through your watchlist fastest.",
+    howtoNote: "Your watchlist is remembered after the first upload and loads automatically next time you open the page. To update it, just drag in a new CSV.",
+    devModeLabel: "Developer mode",
+    devClearBtn: "Clear cache",
+    devClearBtnWorking: "Clearing...",
+    devClearConfirm: "Clear the entire JustWatch match cache? Every movie will be searched from scratch next time.",
+    countryLabel: "Country",
+    langLabel: "Language",
+    dropzoneText: "Drag your CSV file here",
+    dropzoneSub: "or click to choose",
+    progressTitle: "Searching JustWatch…",
+    progressLoading: "Loading...",
+    progressCacheCheck: "Checking cache...",
+    progressError: "Error: ",
+    fileTypeAlert: "Please choose a .csv file.",
+    randomPoolLabel: "Which platforms should random picks come from? (leave empty for the whole watchlist)",
+    randomPickBtn: "🎲 Pick a random movie",
+    randomEmptyPool: "No movies left in this pool - pick another platform or undo some watched movies.",
+    randomNoOffers: "This movie isn't available with a subscription anywhere.",
+    randomRerollBtn: "🎲 Another one",
+    markWatchedBtn: "Mark as watched",
+    rematchTitlePrefix: "Check the match",
+    rematchSubtitle: (m) => `JustWatch results for ${m.title} (${m.year})`,
+    rematchSearching: "Searching...",
+    rematchNoResults: "No results found. Try a different search term.",
+    rematchSaving: "Saving...",
+    rematchSearchPlaceholder: "Search JustWatch with a different name...",
+    rematchSearchBtn: "Search",
+    randomModalTitle: "Random Movie",
+    ownedTitle: "Platforms you already have (check any — the plan treats them as free)",
+    statMonths: "months",
+    statNewMovies: "movies with new subs",
+    statAlreadyOwned: "already have",
+    statWatched: "watched",
+    statNowhere: "unavailable anywhere",
+    statNeedsReview: "matches to review",
+    statTotal: "total watchlist",
+    catalogBadge: (name) => `${name} catalog`,
+    watchedToggleTitle: "Mark as watched",
+    reviewToggleTitle: "Match might be wrong, check it",
+    justwatchMatchNote: (m) => `JustWatch: ${m.matched_title} (${m.matched_year ?? "?"})`,
+    alsoOnPrefix: "also on:",
+    alreadyAvailableTitle: (platforms, count) => `You can already watch these - ${platforms} (${count} movies)`,
+    monthLabel: (n) => `Month ${n}`,
+    movieCountLabel: (n) => `${n} movies`,
+    nowhereTitle: (n) => `Not available with a subscription anywhere (${n})`,
+    watchedListTitle: (n) => `Movies you've watched (${n})`,
+    undoBtn: "undo",
+    removedTitle: (n) => `Removed from your watchlist (${n})`,
+    errorsTitle: (n) => `Movies that couldn't be matched (${n})`,
+  },
+};
+
+// Hangi ulkeler hangi arayuz dilini varsayilan alsin (kullanici elle dil
+// secmediyse). Yeni bir arayuz dili eklendiginde buraya ilgili ulke
+// kodlarini eklemek yeterli - eklenmeyen ulkeler "en"e duser.
+const COUNTRY_DEFAULT_LANG = { TR: "tr" };
+
+let currentLang = "tr";
+
+function t(key, ...args) {
+  const entry = (I18N[currentLang] || I18N.en)[key];
+  return typeof entry === "function" ? entry(...args) : entry;
+}
+
+function applyStaticTranslations() {
+  document.documentElement.lang = currentLang;
+  for (const el of document.querySelectorAll("[data-i18n]")) {
+    el.textContent = t(el.dataset.i18n);
+  }
+  for (const el of document.querySelectorAll("[data-i18n-html]")) {
+    el.innerHTML = t(el.dataset.i18nHtml);
+  }
+  for (const el of document.querySelectorAll("[data-i18n-placeholder]")) {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  }
+}
+
+function setLang(lang, manual) {
+  currentLang = I18N[lang] ? lang : "en";
+  if (langSelect) langSelect.value = currentLang;
+  if (manual) {
+    localStorage.setItem(LANG_STORAGE_KEY, currentLang);
+    localStorage.setItem(LANG_MANUAL_STORAGE_KEY, "1");
+  }
+  applyStaticTranslations();
+  renderCountryOptions();
+  if (lastRawPlan) applyAndRender();
+}
+
+langSelect?.addEventListener("change", () => setLang(langSelect.value, true));
 
 function getRandomPoolPlatforms() {
   try {
@@ -65,22 +236,46 @@ function toggleWatched(uri) {
   setWatched(Array.from(set));
 }
 
-let COUNTRIES_BY_CODE = {};
+let COUNTRIES_LIST = [];
+let DEFAULT_COUNTRY_CODE = "TR";
+
+function countryDisplayName(code) {
+  const c = COUNTRIES_LIST.find((c) => c.code === code);
+  if (!c) return code;
+  return c[`name_${currentLang}`] || c.name_en || c.name_tr;
+}
+
+function renderCountryOptions() {
+  if (!COUNTRIES_LIST.length) return;
+  const current = countrySelect.value;
+  countrySelect.innerHTML = "";
+  for (const c of COUNTRIES_LIST) {
+    const opt = document.createElement("option");
+    opt.value = c.code;
+    opt.textContent = `${countryDisplayName(c.code)} (${c.code})`;
+    countrySelect.appendChild(opt);
+  }
+  countrySelect.value = current || DEFAULT_COUNTRY_CODE;
+}
 
 async function loadCountries() {
   const res = await fetch("/api/countries");
   const { countries, default: defaultCountry } = await res.json();
-  const saved = localStorage.getItem(COUNTRY_STORAGE_KEY);
+  COUNTRIES_LIST = countries;
+  DEFAULT_COUNTRY_CODE = defaultCountry;
 
-  countrySelect.innerHTML = "";
-  for (const c of countries) {
-    COUNTRIES_BY_CODE[c.code] = c.name;
-    const opt = document.createElement("option");
-    opt.value = c.code;
-    opt.textContent = `${c.name} (${c.code})`;
-    countrySelect.appendChild(opt);
-  }
-  countrySelect.value = saved && countries.some((c) => c.code === saved) ? saved : defaultCountry;
+  const savedCountry = localStorage.getItem(COUNTRY_STORAGE_KEY);
+  const initialCountry = savedCountry && countries.some((c) => c.code === savedCountry) ? savedCountry : defaultCountry;
+
+  const savedLang = localStorage.getItem(LANG_STORAGE_KEY);
+  const langIsManual = localStorage.getItem(LANG_MANUAL_STORAGE_KEY) === "1";
+  const initialLang = langIsManual && savedLang ? savedLang : (COUNTRY_DEFAULT_LANG[initialCountry] || "en");
+
+  currentLang = I18N[initialLang] ? initialLang : "en";
+  renderCountryOptions();
+  countrySelect.value = initialCountry;
+  if (langSelect) langSelect.value = currentLang;
+  applyStaticTranslations();
 }
 
 let lastCsvText = null;
@@ -88,6 +283,10 @@ let lastRawPlan = null;
 
 countrySelect?.addEventListener("change", () => {
   localStorage.setItem(COUNTRY_STORAGE_KEY, countrySelect.value);
+  // Dil daha once elle secilmediyse, ulkeye gore otomatik dil ayarla.
+  if (localStorage.getItem(LANG_MANUAL_STORAGE_KEY) !== "1") {
+    setLang(COUNTRY_DEFAULT_LANG[countrySelect.value] || "en", false);
+  }
   if (lastCsvText) uploadCsv(lastCsvText);
 });
 
@@ -102,6 +301,24 @@ async function init() {
 }
 
 init();
+
+// --- GELISTIRME ARACI - sadece ?dev=1 ile gorunur ---
+// Gelistirme bitince bu blogu, index.html'deki #dev-tools bolumunu ve
+// server.py'daki /api/clear-cache endpoint'ini birlikte kaldir.
+if (new URLSearchParams(location.search).has("dev")) {
+  const devTools = document.getElementById("dev-tools");
+  const devClearBtn = document.getElementById("dev-clear-cache-btn");
+  devTools?.classList.remove("hidden");
+  devClearBtn?.addEventListener("click", async () => {
+    if (!confirm(t("devClearConfirm"))) return;
+    devClearBtn.disabled = true;
+    devClearBtn.textContent = t("devClearBtnWorking");
+    await fetch("/api/clear-cache", { method: "POST" });
+    devClearBtn.disabled = false;
+    devClearBtn.textContent = t("devClearBtn");
+    if (lastCsvText) uploadCsv(lastCsvText);
+  });
+}
 
 const PLATFORM_COLORS = {
   "Netflix": "#E50914",
@@ -152,7 +369,7 @@ fileInput.addEventListener("change", () => {
 
 function handleFile(file) {
   if (!file.name.toLowerCase().endsWith(".csv")) {
-    alert("Lutfen bir .csv dosyasi sec.");
+    alert(t("fileTypeAlert"));
     return;
   }
   const reader = new FileReader();
@@ -170,7 +387,7 @@ async function uploadCsv(csvText) {
   dropzone.classList.add("compact");
   progressPanel.classList.remove("hidden");
   progressFill.style.width = "6%";
-  progressDetail.textContent = "Yukleniyor...";
+  progressDetail.textContent = t("progressLoading");
 
   const res = await fetch("/api/upload", {
     method: "POST",
@@ -197,7 +414,7 @@ function pollStatus(jobId) {
       progressFill.style.width = pct + "%";
       progressDetail.textContent = `[${job.done}/${job.total}] ${job.current}`;
     } else if (job.status === "running") {
-      progressDetail.textContent = "Cache kontrol ediliyor...";
+      progressDetail.textContent = t("progressCacheCheck");
     }
 
     if (job.status === "done") {
@@ -210,7 +427,7 @@ function pollStatus(jobId) {
       }, 200);
     } else if (job.status === "error") {
       clearInterval(timer);
-      progressDetail.textContent = "Hata: " + job.error;
+      progressDetail.textContent = t("progressError") + job.error;
     }
   }, 400));
 }
@@ -332,7 +549,7 @@ function renderRandomPicker(plan) {
 
   const title = document.createElement("div");
   title.className = "owned-title";
-  title.textContent = "Rastgele film onerisi hangi platformlar arasindan secilsin? (bos birakirsan tum watchlist)";
+  title.textContent = t("randomPoolLabel");
   randomPickerEl.appendChild(title);
 
   const chips = document.createElement("div");
@@ -361,7 +578,7 @@ function renderRandomPicker(plan) {
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "random-btn";
-  btn.textContent = "🎲 Rastgele film sec";
+  btn.textContent = t("randomPickBtn");
   btn.addEventListener("click", showRandomPick);
   randomPickerEl.appendChild(btn);
 
@@ -389,7 +606,7 @@ function showRandomPick() {
   randomModal.classList.remove("hidden");
   const pool = randomPool();
   if (!pool.length) {
-    randomBody.innerHTML = "Bu havuzda secilebilecek film kalmadi - baska platform sec ya da izlenenleri geri al.";
+    randomBody.innerHTML = t("randomEmptyPool");
     return;
   }
   const movie = pool[Math.floor(Math.random() * pool.length)];
@@ -425,7 +642,7 @@ function renderRandomResult(movie) {
       links.appendChild(a);
     }
   } else {
-    links.textContent = "Bu film hicbir platformda abonelikle bulunamadi.";
+    links.textContent = t("randomNoOffers");
   }
   wrap.appendChild(links);
 
@@ -435,13 +652,13 @@ function renderRandomResult(movie) {
   const rerollBtn = document.createElement("button");
   rerollBtn.type = "button";
   rerollBtn.className = "random-btn";
-  rerollBtn.textContent = "🎲 Baska film";
+  rerollBtn.textContent = t("randomRerollBtn");
   rerollBtn.addEventListener("click", showRandomPick);
 
   const watchedBtn = document.createElement("button");
   watchedBtn.type = "button";
   watchedBtn.className = "undo-watched-btn";
-  watchedBtn.textContent = "Izledim isaretle";
+  watchedBtn.textContent = t("markWatchedBtn");
   watchedBtn.addEventListener("click", () => {
     toggleWatched(movie.uri);
     closeRandomModal();
@@ -467,9 +684,13 @@ randomModal.addEventListener("click", (e) => {
 
 // --- Yanlis eslesme duzeltme (rematch) modali ---
 
+let rematchMovie = null;
+
 function closeRematchModal() {
   rematchModal.classList.add("hidden");
   rematchBody.innerHTML = "";
+  rematchSearchInput.value = "";
+  rematchMovie = null;
 }
 
 rematchClose.addEventListener("click", closeRematchModal);
@@ -477,19 +698,36 @@ rematchModal.addEventListener("click", (e) => {
   if (e.target === rematchModal) closeRematchModal();
 });
 
-async function openRematchModal(movie) {
+rematchSearchBtn.addEventListener("click", () => {
+  const query = rematchSearchInput.value.trim();
+  if (query && rematchMovie) runRematchSearch(rematchMovie, query);
+});
+rematchSearchInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    rematchSearchBtn.click();
+  }
+});
+
+function openRematchModal(movie) {
+  rematchMovie = movie;
   rematchModal.classList.remove("hidden");
-  rematchTitle.innerHTML = `Eslesmeyi kontrol et<span class="sub">${movie.title} (${movie.year}) icin JustWatch sonuclari</span>`;
-  rematchBody.innerHTML = "Araniyor...";
+  rematchTitle.innerHTML = `${t("rematchTitlePrefix")}<span class="sub">${t("rematchSubtitle", movie)}</span>`;
+  rematchSearchInput.value = movie.title;
+  runRematchSearch(movie, movie.title);
+}
+
+async function runRematchSearch(movie, query) {
+  rematchBody.innerHTML = t("rematchSearching");
 
   const res = await fetch("/api/rematch", {
     method: "POST",
-    body: JSON.stringify({ title: movie.title, year: movie.year, country: countrySelect.value }),
+    body: JSON.stringify({ title: query, year: movie.year, country: countrySelect.value }),
   });
   const { candidates, error } = await res.json();
 
   if (error || !candidates || !candidates.length) {
-    rematchBody.textContent = error || "Sonuc bulunamadi.";
+    rematchBody.textContent = error || t("rematchNoResults");
     return;
   }
 
@@ -530,7 +768,7 @@ async function openRematchModal(movie) {
 }
 
 async function confirmMatch(movie, candidate) {
-  rematchBody.innerHTML = "Kaydediliyor...";
+  rematchBody.innerHTML = t("rematchSaving");
   await fetch("/api/confirm-match", {
     method: "POST",
     body: JSON.stringify({
@@ -557,7 +795,7 @@ function renderOwnedPanel(plan) {
 
   const title = document.createElement("div");
   title.className = "owned-title";
-  title.textContent = "Zaten sahip oldugun platformlar (varsa isaretle, plan onlari ucretsiz saysin)";
+  title.textContent = t("ownedTitle");
   ownedPlatformsEl.appendChild(title);
 
   const chips = document.createElement("div");
@@ -598,20 +836,20 @@ function renderSummary(plan) {
   const totalMovies = plan.monthly_plan.reduce((sum, s) => sum + s.movies.length, 0);
   summaryEl.innerHTML = "";
 
-  const countryName = COUNTRIES_BY_CODE[plan.country] || plan.country;
+  const countryName = countryDisplayName(plan.country);
   const badge = document.createElement("div");
   badge.className = "country-badge";
-  badge.textContent = `${countryName} katalogu`;
+  badge.textContent = t("catalogBadge", countryName);
   summaryEl.appendChild(badge);
 
   const stats = [
-    { num: plan.monthly_plan.length, label: "ay" },
-    { num: totalMovies, label: "yeni abonelikle film" },
-    { num: plan.already_available.length, label: "zaten sende var" },
-    { num: plan.watched_movies.length, label: "izledin" },
-    { num: plan.not_available_anywhere.length, label: "hicbir yerde yok" },
-    { num: countNeedsReview(plan), label: "eslesme kontrolu onerilir" },
-    { num: plan.total_movies, label: "toplam watchlist" },
+    { num: plan.monthly_plan.length, label: t("statMonths") },
+    { num: totalMovies, label: t("statNewMovies") },
+    { num: plan.already_available.length, label: t("statAlreadyOwned") },
+    { num: plan.watched_movies.length, label: t("statWatched") },
+    { num: plan.not_available_anywhere.length, label: t("statNowhere") },
+    { num: countNeedsReview(plan), label: t("statNeedsReview") },
+    { num: plan.total_movies, label: t("statTotal") },
   ];
   for (const s of stats) {
     const div = document.createElement("div");
@@ -643,7 +881,7 @@ function movieCard(movie, platformName, excludePlatforms) {
   const watchedBtn = document.createElement("button");
   watchedBtn.className = "watched-toggle";
   watchedBtn.type = "button";
-  watchedBtn.title = "Izledim isaretle";
+  watchedBtn.title = t("watchedToggleTitle");
   watchedBtn.textContent = "✓";
   watchedBtn.addEventListener("click", (e) => {
     e.preventDefault();
@@ -657,7 +895,7 @@ function movieCard(movie, platformName, excludePlatforms) {
     const reviewBtn = document.createElement("button");
     reviewBtn.className = "review-toggle";
     reviewBtn.type = "button";
-    reviewBtn.title = "Eslesme yanlis olabilir, kontrol et";
+    reviewBtn.title = t("reviewToggleTitle");
     reviewBtn.textContent = "⚠";
     reviewBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -683,7 +921,7 @@ function movieCard(movie, platformName, excludePlatforms) {
     const reviewNote = document.createElement("div");
     reviewNote.className = "movie-also-on";
     reviewNote.style.color = "#ffc857";
-    reviewNote.textContent = `JustWatch: ${movie.matched_title} (${movie.matched_year ?? "?"})`;
+    reviewNote.textContent = t("justwatchMatchNote", movie);
     a.appendChild(reviewNote);
   }
 
@@ -691,7 +929,7 @@ function movieCard(movie, platformName, excludePlatforms) {
   if (others.length) {
     const alsoOn = document.createElement("div");
     alsoOn.className = "movie-also-on";
-    alsoOn.textContent = `ayrica: ${others.join(", ")}`;
+    alsoOn.textContent = `${t("alsoOnPrefix")} ${others.join(", ")}`;
     alsoOn.title = others.join(", ");
     a.appendChild(alsoOn);
   }
@@ -707,7 +945,7 @@ function renderResults(plan) {
     box.className = "already-section";
     const title = document.createElement("div");
     title.className = "already-title";
-    title.textContent = `Zaten izleyebilirsin - ${plan.owned_platforms.join(", ")} (${plan.already_available.length} film)`;
+    title.textContent = t("alreadyAvailableTitle", plan.owned_platforms.join(", "), plan.already_available.length);
     box.appendChild(title);
 
     const row = document.createElement("div");
@@ -731,9 +969,9 @@ function renderResults(plan) {
     const header = document.createElement("div");
     header.className = "platform-header";
     header.innerHTML = `
-      <span class="platform-month">Ay ${step.month}</span>
+      <span class="platform-month">${t("monthLabel", step.month)}</span>
       <span class="platform-name">${step.platform}</span>
-      <span class="platform-count">${step.movies.length} film</span>
+      <span class="platform-count">${t("movieCountLabel", step.movies.length)}</span>
     `;
     section.appendChild(header);
 
@@ -755,7 +993,7 @@ function renderResults(plan) {
     box.className = "nowhere-section";
     const title = document.createElement("div");
     title.className = "nowhere-title";
-    title.textContent = `Hicbir platformda abonelikle bulunamadi (${plan.not_available_anywhere.length})`;
+    title.textContent = t("nowhereTitle", plan.not_available_anywhere.length);
     const grid = document.createElement("div");
     grid.className = "nowhere-grid";
     for (const movie of plan.not_available_anywhere) {
@@ -764,7 +1002,7 @@ function renderResults(plan) {
       const label = movie.needs_review ? " ⚠" : "";
       chip.innerHTML = `${movie.title} <span class="yr">${movie.year}</span>${label}`;
       if (movie.needs_review) {
-        chip.title = "Eslesme yanlis olabilir, kontrol et";
+        chip.title = t("reviewToggleTitle");
         chip.addEventListener("click", () => openRematchModal(movie));
       }
       grid.appendChild(chip);
@@ -786,7 +1024,7 @@ function renderFooterNotes(plan) {
     const box = document.createElement("details");
     box.className = "note-box";
     const summary = document.createElement("summary");
-    summary.textContent = `Izledigin filmler (${plan.watched_movies.length})`;
+    summary.textContent = t("watchedListTitle", plan.watched_movies.length);
     box.appendChild(summary);
     const ul = document.createElement("ul");
     for (const m of plan.watched_movies) {
@@ -795,7 +1033,7 @@ function renderFooterNotes(plan) {
       const undoBtn = document.createElement("button");
       undoBtn.className = "undo-watched-btn";
       undoBtn.type = "button";
-      undoBtn.textContent = "geri al";
+      undoBtn.textContent = t("undoBtn");
       undoBtn.addEventListener("click", () => {
         toggleWatched(m.uri);
         applyAndRender();
@@ -811,7 +1049,7 @@ function renderFooterNotes(plan) {
     any = true;
     const box = document.createElement("details");
     box.className = "note-box";
-    box.innerHTML = `<summary>Watchlist'ten cikmis (${plan.removed_from_watchlist.length})</summary>
+    box.innerHTML = `<summary>${t("removedTitle", plan.removed_from_watchlist.length)}</summary>
       <ul>${plan.removed_from_watchlist.map((m) => `<li>${m.title} (${m.year})</li>`).join("")}</ul>`;
     footerEl.appendChild(box);
   }
@@ -820,7 +1058,7 @@ function renderFooterNotes(plan) {
     any = true;
     const box = document.createElement("details");
     box.className = "note-box error";
-    box.innerHTML = `<summary>Eslestirilemeyen filmler (${plan.errors.length})</summary>
+    box.innerHTML = `<summary>${t("errorsTitle", plan.errors.length)}</summary>
       <ul>${plan.errors.map((e) => `<li>${e.title} (${e.year}) &mdash; ${e.error}</li>`).join("")}</ul>`;
     footerEl.appendChild(box);
   }

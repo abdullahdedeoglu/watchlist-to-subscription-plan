@@ -36,7 +36,7 @@ def find_default_csv() -> str:
 
 
 def print_report(plan: dict) -> None:
-    country_name = core.COUNTRIES.get(plan["country"], (plan["country"],))[0]
+    country_name = core.COUNTRIES.get(plan["country"], {}).get("tr", plan["country"])
     print("\n" + "=" * 60)
     print(f"AYLIK ABONELIK PLANI ({country_name} / {plan['country']})")
     print("=" * 60)

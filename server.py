@@ -95,8 +95,8 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/countries":
             countries = [
-                {"code": code, "name": name, "language": lang}
-                for code, (name, lang) in core.COUNTRIES.items()
+                {"code": code, "name_tr": info["tr"], "name_en": info["en"], "language": info["lang"]}
+                for code, info in core.COUNTRIES.items()
             ]
             self._send_json({"countries": countries, "default": core.DEFAULT_COUNTRY})
             return
@@ -140,6 +140,14 @@ class Handler(BaseHTTPRequestHandler):
             cache = core.load_cache(core.CACHE_FILE)
             entry = core.confirm_match(cache, uri, title, year, country, candidate, core.CACHE_FILE)
             self._send_json({"ok": True, "entry": entry})
+            return
+
+        if self.path == "/api/clear-cache":
+            # GELISTIRME ARACI - JustWatch eslestirme cache'ini sifirlar.
+            # Gelistirme bitince bu endpoint'i ve web/index.html + app.js'teki
+            # "dev-tools" bolumunu birlikte kaldir.
+            core.save_cache({}, core.CACHE_FILE)
+            self._send_json({"ok": True})
             return
 
         if self.path == "/api/upload":

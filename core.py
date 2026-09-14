@@ -17,33 +17,35 @@ DEFAULT_COUNTRY = "TR"
 SEARCH_COUNT = 5
 REQUEST_DELAY_SECONDS = 0.5
 
-# Desteklenen ulkeler: kod -> (goruntulenen isim, JustWatch dil kodu)
+# Desteklenen ulkeler: kod -> {goruntulenen isim (tr/en), JustWatch dil kodu}.
+# Ulke isimleri arayuz dili tr/en icin ayri ayri tutulur; yeni bir arayuz dili
+# eklendiginde her ulkeye o dilde bir isim eklemek yeterli.
 COUNTRIES = {
-    "TR": ("Turkiye", "tr"),
-    "US": ("Amerika Birlesik Devletleri", "en"),
-    "GB": ("Ingiltere", "en"),
-    "DE": ("Almanya", "de"),
-    "FR": ("Fransa", "fr"),
-    "ES": ("Ispanya", "es"),
-    "IT": ("Italya", "it"),
-    "NL": ("Hollanda", "nl"),
-    "PT": ("Portekiz", "pt"),
-    "BR": ("Brezilya", "pt"),
-    "CA": ("Kanada", "en"),
-    "AU": ("Avustralya", "en"),
-    "MX": ("Meksika", "es"),
-    "PL": ("Polonya", "pl"),
-    "SE": ("Isvec", "sv"),
-    "IN": ("Hindistan", "en"),
-    "JP": ("Japonya", "ja"),
-    "KR": ("Guney Kore", "ko"),
-    "RU": ("Rusya", "ru"),
-    "AR": ("Arjantin", "es"),
+    "TR": {"tr": "Turkiye", "en": "Turkey", "lang": "tr"},
+    "US": {"tr": "Amerika Birlesik Devletleri", "en": "United States", "lang": "en"},
+    "GB": {"tr": "Ingiltere", "en": "United Kingdom", "lang": "en"},
+    "DE": {"tr": "Almanya", "en": "Germany", "lang": "de"},
+    "FR": {"tr": "Fransa", "en": "France", "lang": "fr"},
+    "ES": {"tr": "Ispanya", "en": "Spain", "lang": "es"},
+    "IT": {"tr": "Italya", "en": "Italy", "lang": "it"},
+    "NL": {"tr": "Hollanda", "en": "Netherlands", "lang": "nl"},
+    "PT": {"tr": "Portekiz", "en": "Portugal", "lang": "pt"},
+    "BR": {"tr": "Brezilya", "en": "Brazil", "lang": "pt"},
+    "CA": {"tr": "Kanada", "en": "Canada", "lang": "en"},
+    "AU": {"tr": "Avustralya", "en": "Australia", "lang": "en"},
+    "MX": {"tr": "Meksika", "en": "Mexico", "lang": "es"},
+    "PL": {"tr": "Polonya", "en": "Poland", "lang": "pl"},
+    "SE": {"tr": "Isvec", "en": "Sweden", "lang": "sv"},
+    "IN": {"tr": "Hindistan", "en": "India", "lang": "en"},
+    "JP": {"tr": "Japonya", "en": "Japan", "lang": "ja"},
+    "KR": {"tr": "Guney Kore", "en": "South Korea", "lang": "ko"},
+    "RU": {"tr": "Rusya", "en": "Russia", "lang": "ru"},
+    "AR": {"tr": "Arjantin", "en": "Argentina", "lang": "es"},
 }
 
 
 def language_for(country: str) -> str:
-    return COUNTRIES.get(country, (None, "en"))[1]
+    return COUNTRIES.get(country, {}).get("lang", "en")
 
 
 def parse_csv_text(text: str) -> list[dict]:
@@ -105,10 +107,11 @@ def flatrate_offers(entry) -> list[dict]:
     offers = []
     seen = set()
     for offer in entry.offers:
-        if offer.monetization_type != "FLATRATE" or offer.name in seen:
+        name = offer.package.name
+        if offer.monetization_type != "FLATRATE" or name in seen:
             continue
-        seen.add(offer.name)
-        offers.append({"platform": offer.name, "url": offer.url})
+        seen.add(name)
+        offers.append({"platform": name, "url": offer.url})
     return offers
 
 
