@@ -11,6 +11,7 @@ sadece .exists() / .read_text() / .write_text() / .unlink() kullanirlar.
 
 import json
 import os
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -28,8 +29,14 @@ def _upstash_request(method: str, path: str, body: bytes | None = None) -> dict:
         method=method,
         headers={"Authorization": f"Bearer {UPSTASH_TOKEN}"},
     )
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Upstash istegi basarisiz ({exc.code}): {detail}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Upstash'e baglanilamadi: {exc.reason}") from exc
 
 
 class RedisPath:

@@ -17,6 +17,7 @@ import re
 import sys
 import threading
 import time
+import traceback
 import uuid
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -176,6 +177,13 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        try:
+            self._handle_get()
+        except Exception as exc:
+            traceback.print_exc()
+            self._send_json({"error": f"sunucu hatasi: {exc}"}, status=500)
+
+    def _handle_get(self):
         self._ensure_session()
         path = self.path.split("?")[0]
 
@@ -227,6 +235,13 @@ class Handler(BaseHTTPRequestHandler):
         return json.loads(self.rfile.read(length).decode("utf-8"))
 
     def do_POST(self):
+        try:
+            self._handle_post()
+        except Exception as exc:
+            traceback.print_exc()
+            self._send_json({"error": f"sunucu hatasi: {exc}"}, status=500)
+
+    def _handle_post(self):
         self._ensure_session()
         if self.path == "/api/rematch":
             body = self._read_json_body()
