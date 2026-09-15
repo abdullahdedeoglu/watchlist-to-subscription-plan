@@ -17,16 +17,26 @@
     <p class="subtitle" data-i18n="subtitle">Letterboxd watchlist CSV'ni sürükle, hangi sırada hangi platforma abone olman gerektiğini gör.</p>
   </header>
 
-  <details class="howto-box" open>
+  <details class="howto-box">
     <summary data-i18n="howtoSummary">Nasıl kullanılır?</summary>
-    <ol class="howto-steps">
-      <li data-i18n-html="howtoStep1">Letterboxd'da <strong>Ayarlar &rarr; Import &amp; Export &rarr; Export Data</strong> yoluna git ve watchlist'ini dışa aktar (bir <code>.zip</code> dosyası iner).</li>
-      <li data-i18n-html="howtoStep2">ZIP'i aç, içinden <code>watchlist.csv</code> dosyasını çıkar.</li>
-      <li data-i18n-html="howtoStep3">O CSV dosyasını aşağıdaki alana sürükle-bırak (ya da alana tıkla ve dosyayı seç).</li>
-      <li data-i18n-html="howtoStep4">Üst taraftan ülkeni seç &mdash; varsayılan Türkiye. JustWatch'ta o ülkedeki abonelik seçenekleri aranır, biraz sürebilir.</li>
-      <li data-i18n-html="howtoStep5">Arama bitince, hangi sırayla hangi platforma abone olursan watchlist'ini en hızlı bitireceğini görürsün.</li>
-      <li data-i18n-html="howtoStep6">Poster'in sağ üstündeki <strong>&check;</strong> izledim işaretler, sol üstteki sarı <strong>&#9888;</strong> ise eşleşmeyi kontrol etmeni önerir.</li>
-    </ol>
+    <div class="howto-content">
+      <ol class="howto-steps">
+        <li data-i18n-html="howtoStep1">Letterboxd'da <strong>Profil &rarr; Watchlist &rarr; Export watchlist</strong> yoluna git &mdash; bir <code>.csv</code> dosyası doğrudan iner (zip yok).</li>
+        <li data-i18n-html="howtoStep3">O CSV dosyasını aşağıdaki alana sürükle-bırak (ya da alana tıkla ve dosyayı seç).</li>
+        <li data-i18n-html="howtoStep4">Üst taraftan ülkeni seç &mdash; varsayılan Türkiye. JustWatch'ta o ülkedeki abonelik seçenekleri aranır, biraz sürebilir.</li>
+        <li data-i18n-html="howtoStep5">Arama bitince, hangi sırayla hangi platforma abone olursan watchlist'ini en hızlı bitireceğini görürsün.</li>
+        <li data-i18n-html="howtoStep6">Poster'in sağ üstündeki <strong>&check;</strong> izledim işaretler, sol üstteki sarı <strong>&#9888;</strong> ise eşleşmeyi kontrol etmeni önerir.</li>
+      </ol>
+      <div class="howto-video-card">
+        <div class="howto-video-card-label" data-i18n="howtoStep2">1. adımı video olarak izle (56 sn)</div>
+        <div class="howto-video" id="howto-video">
+          <button type="button" class="howto-video-facade" id="howto-video-facade" data-i18n-aria-label="howtoVideoPlayLabel" aria-label="Videoyu oynat">
+            <img src="https://i.ytimg.com/vi/iC9Uty4MaeU/hqdefault.jpg" alt="" />
+            <span class="howto-video-play"></span>
+          </button>
+        </div>
+      </div>
+    </div>
     <p class="howto-note" data-i18n="howtoNote">Watchlist'in bir kere yüklendikten sonra hatırlanır, sayfayı tekrar açtığında otomatik gelir. Güncellemek için yeni CSV'yi tekrar sürükleyip bırakman yeterli.</p>
   </details>
 

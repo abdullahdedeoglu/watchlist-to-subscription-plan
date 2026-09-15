@@ -46,8 +46,9 @@ const I18N = {
     headerTitle: "Watchlist → Abonelik Planı",
     subtitle: "Letterboxd watchlist CSV'ni sürükle, hangi sırada hangi platforma abone olman gerektiğini gör.",
     howtoSummary: "Nasıl kullanılır?",
-    howtoStep1: "Letterboxd'da <strong>Ayarlar → Import &amp; Export → Export Data</strong> yoluna git ve watchlist'ini dışa aktar (bir <code>.zip</code> dosyası iner).",
-    howtoStep2: "ZIP'i aç, içinden <code>watchlist.csv</code> dosyasını çıkar.",
+    howtoStep1: "Letterboxd'da <strong>Profil → Watchlist → Export watchlist</strong> yoluna git — bir <code>.csv</code> dosyası doğrudan iner (zip yok).",
+    howtoStep2: "1. adımı video olarak izle (56 sn)",
+    howtoVideoPlayLabel: "Videoyu oynat",
     howtoStep3: "O CSV dosyasını aşağıdaki alana sürükle-bırak (ya da alana tıkla ve dosyayı seç).",
     howtoStep4: "Üst taraftan ülkeni seç — varsayılan Türkiye. JustWatch'ta o ülkedeki abonelik seçenekleri aranır, biraz sürebilir.",
     howtoStep5: "Arama bitince, hangi sırayla hangi platforma abone olursan watchlist'ini en hızlı bitireceğini görürsün.",
@@ -124,8 +125,9 @@ const I18N = {
     headerTitle: "Watchlist → Subscription Plan",
     subtitle: "Drag in your Letterboxd watchlist CSV and see which order to subscribe to which platform.",
     howtoSummary: "How does this work?",
-    howtoStep1: "Go to <strong>Settings → Import &amp; Export → Export Data</strong> on Letterboxd and export your watchlist (a <code>.zip</code> file downloads).",
-    howtoStep2: "Unzip it and pull out the <code>watchlist.csv</code> file.",
+    howtoStep1: "Go to <strong>Profile → Watchlist → Export watchlist</strong> on Letterboxd — a <code>.csv</code> file downloads directly (no zip).",
+    howtoStep2: "Watch step 1 as a video (56s)",
+    howtoVideoPlayLabel: "Play the video",
     howtoStep3: "Drag that CSV file onto the box below (or click it and choose the file).",
     howtoStep4: "Pick your country above — Turkey by default. Subscription options in that country are searched on JustWatch, which can take a bit.",
     howtoStep5: "Once the search finishes, you'll see which order to subscribe to which platform to get through your watchlist fastest.",
@@ -222,7 +224,23 @@ function applyStaticTranslations() {
   for (const el of document.querySelectorAll("[data-i18n-placeholder]")) {
     el.placeholder = t(el.dataset.i18nPlaceholder);
   }
+  for (const el of document.querySelectorAll("[data-i18n-aria-label]")) {
+    el.setAttribute("aria-label", t(el.dataset.i18nAriaLabel));
+  }
 }
+
+// Nasil-kullanilir videosu: sayfa acilir acilmaz YouTube'dan hicbir sey
+// cekmesin diye (gizlilik + performans) sadece bir kapak resmi/play butonu
+// gosteriyoruz; tiklaninca gercek iframe DOM'a ekleniyor ve otomatik baslatiyor.
+const howtoVideoFacade = document.getElementById("howto-video-facade");
+howtoVideoFacade?.addEventListener("click", () => {
+  const wrap = document.getElementById("howto-video");
+  wrap.innerHTML =
+    '<iframe src="https://www.youtube-nocookie.com/embed/iC9Uty4MaeU?autoplay=1" ' +
+    'title="Letterboxd watchlist export" frameborder="0" ' +
+    'allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" ' +
+    "allowfullscreen></iframe>";
+});
 
 function setLang(lang, manual) {
   currentLang = I18N[lang] ? lang : "en";
