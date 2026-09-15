@@ -8,6 +8,7 @@ import csv
 import io
 import json
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -16,6 +17,11 @@ from simplejustwatchapi.justwatch import search
 CACHE_FILE = Path("justwatch_cache.json")
 DEFAULT_COUNTRY = "TR"
 SEARCH_COUNT = 5
+# Bir cache kaydi kac gun sonra "eski" sayilip yeniden aransin - platform
+# katalogu zamanla degisiyor (bir film Netflix'ten kalkabilir vs.), sonsuza
+# kadar ayni cevabi vermek yanlis bilgi verir. 7 gun, guncellik ile JustWatch'a
+# ek yuk arasinda kullanicinin sectigi denge noktasi.
+CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
 # Ayni anda JustWatch'a atilacak istek sayisi. Ag gecikmesi tek tek istekleri
 # yavaslatiyordu, bu da darbogazdi (CPU degil). Cok yuksek bir deger resmi
 # olmayan API'yi tetikleyip rate-limit/IP engeline yol acabilir; 4 makul bir
@@ -23,6 +29,15 @@ SEARCH_COUNT = 5
 # ederken IP'nin gecici olarak 403 ile bloklandigi gozlemlendi - bu deger
 # hem hizi koruyup hem riski biraz azaltmak icin 6'dan dusuruldu.)
 MAX_CONCURRENT_REQUESTS = 4
+
+# sync_cache() her cagrisinda kendi ThreadPoolExecutor'ini acar - bu sadece
+# TEK bir is (tek bir kullanicinin yuklemesi) icindeki aramalari sinirlar.
+# Birden fazla kullanici ayni anda yukleme yaparsa, her biri kendi 4'luk
+# havuzuyla calisir ve toplamda MAX_CONCURRENT_REQUESTS'in kat kat uzerine
+# cikilabilir. Asil JustWatch'a giden agi cagrisini (search()) sarmalayan bu
+# SURECI GENELINDE PAYLASILAN semafor, kac is/kullanici olursa olsun ayni
+# anda en fazla MAX_CONCURRENT_REQUESTS istek gitmesini garanti eder.
+_JUSTWATCH_SEMAPHORE = threading.Semaphore(MAX_CONCURRENT_REQUESTS)
 
 # Desteklenen ulkeler: kod -> {goruntulenen isim (tr/en), JustWatch dil kodu}.
 # Ulke isimleri arayuz dili tr/en icin ayri ayri tutulur; yeni bir arayuz dili
@@ -227,7 +242,18 @@ def needs_lookup(cache: dict, uri: str, country: str) -> bool:
     entry = cache.get(uri)
     if entry is None:
         return True
-    return country not in entry.get("by_country", {})
+    data = entry.get("by_country", {}).get(country)
+    if data is None:
+        return True
+    if data.get("manually_confirmed"):
+        # Kullanicinin elle duzelttigi eslesmeyi otomatik arama geri
+        # cevirmesin (otomatik algoritma farkli bir filmi secebilir) -
+        # bu kayitlar TTL'den bagimsiz gecerli sayilir.
+        return False
+    checked_at = data.get("checked_at")
+    if checked_at is None:
+        return True  # bu ozellik eklenmeden once aranmis eski kayit
+    return (time.time() - checked_at) > CACHE_TTL_SECONDS
 
 
 def _target_year(year: str) -> int | None:
@@ -240,7 +266,8 @@ def _target_year(year: str) -> int | None:
 def search_movie(title: str, year: str, country: str, language: str) -> tuple[dict | None, str | None]:
     """Returns (by_country_entry_dict, error_message)."""
     try:
-        results = search(title, country=country, language=language, count=SEARCH_COUNT)
+        with _JUSTWATCH_SEMAPHORE:
+            results = search(title, country=country, language=language, count=SEARCH_COUNT)
     except Exception as exc:  # network / rate limit / API errors
         return None, f"JustWatch istegi basarisiz: {exc}"
 
@@ -265,13 +292,15 @@ def search_movie(title: str, year: str, country: str, language: str) -> tuple[di
     candidate = entry_to_candidate(chosen)
     candidate["needs_review"] = needs_review
     candidate["manually_confirmed"] = False
+    candidate["checked_at"] = time.time()
     return candidate, None
 
 
 def search_candidates(title: str, country: str, language: str, count: int = 8) -> tuple[list[dict], str | None]:
     """Rematch/duzeltme arayuzu icin butun aday sonuclari dondurur (otomatik secim yapmaz)."""
     try:
-        results = search(title, country=country, language=language, count=count)
+        with _JUSTWATCH_SEMAPHORE:
+            results = search(title, country=country, language=language, count=count)
     except Exception as exc:
         return [], f"JustWatch istegi basarisiz: {exc}"
     if not results:
@@ -292,6 +321,7 @@ def confirm_match(cache: dict, uri: str, csv_title: str, csv_year: str, country:
         "matched": True,
         "needs_review": False,
         "manually_confirmed": True,
+        "checked_at": time.time(),
     }
     _merge_and_save(cache_file, {uri: entry})
     return entry["by_country"][country]
