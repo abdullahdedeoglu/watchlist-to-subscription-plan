@@ -22,6 +22,12 @@ const randomBody = document.getElementById("random-body");
 const randomPoolPanelEl = document.getElementById("random-pool-panel");
 const randomPoolChipsEl = document.getElementById("random-pool-chips");
 const clearWatchlistBtn = document.getElementById("clear-watchlist-btn");
+const addFilmModal = document.getElementById("add-film-modal");
+const addFilmTitleEl = document.getElementById("add-film-title");
+const addFilmClose = document.getElementById("add-film-close");
+const addFilmBody = document.getElementById("add-film-body");
+const addFilmSearchInput = document.getElementById("add-film-search-input");
+const addFilmSearchBtn = document.getElementById("add-film-search-btn");
 
 const OWNED_STORAGE_KEY = "watchlist-owned-platforms";
 const WATCHED_STORAGE_KEY = "watchlist-watched";
@@ -109,6 +115,9 @@ const I18N = {
     undoBtn: "Geri al",
     removedTitle: (n) => `Watchlist'ten çıkmış (${n})`,
     errorsTitle: (n) => `Eşleştirilemeyen filmler (${n})`,
+    addFilmTriggerTitle: "Film ekle",
+    removeToggleTitle: "Listeden kaldır",
+    removeFilmConfirm: "Bu film watchlist'ten kalıcı olarak kaldırılsın mı? (Letterboxd'daki gerçek watchlist'ini etkilemez, sadece bu araçtaki görünümü.)",
   },
   en: {
     pageTitle: "Watchlist Plan",
@@ -184,6 +193,9 @@ const I18N = {
     undoBtn: "Undo",
     removedTitle: (n) => `Removed from your watchlist (${n})`,
     errorsTitle: (n) => `Movies that couldn't be matched (${n})`,
+    addFilmTriggerTitle: "Add a movie",
+    removeToggleTitle: "Remove from list",
+    removeFilmConfirm: "Permanently remove this movie from your watchlist here? (Doesn't touch your actual Letterboxd watchlist, just this tool's view of it.)",
   },
 };
 
@@ -985,21 +997,10 @@ function openRematchModal(movie) {
   runRematchSearch(movie, movie.title);
 }
 
-async function runRematchSearch(movie, query) {
-  rematchBody.innerHTML = t("rematchSearching");
-
-  const res = await fetch("/api/rematch", {
-    method: "POST",
-    body: JSON.stringify({ title: query, year: movie.year, country: countrySelect.value }),
-  });
-  const { candidates, error } = await res.json();
-
-  if (error || !candidates || !candidates.length) {
-    rematchBody.textContent = error || t("rematchNoResults");
-    return;
-  }
-
-  rematchBody.innerHTML = "";
+// Aday sonuc grid'i hem rematch (yanlis eslesme duzeltme) hem de yeni film
+// ekleme modalinda ayni sekilde gorunur - render mantigi burada ortak.
+function renderCandidateGrid(container, candidates, onSelect) {
+  container.innerHTML = "";
   const grid = document.createElement("div");
   grid.className = "candidate-grid";
   for (const candidate of candidates) {
@@ -1029,10 +1030,27 @@ async function runRematchSearch(movie, query) {
       card.appendChild(platforms);
     }
 
-    card.addEventListener("click", () => confirmMatch(movie, candidate));
+    card.addEventListener("click", () => onSelect(candidate));
     grid.appendChild(card);
   }
-  rematchBody.appendChild(grid);
+  container.appendChild(grid);
+}
+
+async function runRematchSearch(movie, query) {
+  rematchBody.innerHTML = t("rematchSearching");
+
+  const res = await fetch("/api/rematch", {
+    method: "POST",
+    body: JSON.stringify({ title: query, year: movie.year, country: countrySelect.value }),
+  });
+  const { candidates, error } = await res.json();
+
+  if (error || !candidates || !candidates.length) {
+    rematchBody.textContent = error || t("rematchNoResults");
+    return;
+  }
+
+  renderCandidateGrid(rematchBody, candidates, (candidate) => confirmMatch(movie, candidate));
 }
 
 async function confirmMatch(movie, candidate) {
@@ -1052,6 +1070,83 @@ async function confirmMatch(movie, candidate) {
   if (lastCsvText) uploadCsv(lastCsvText, lastPreset);
 }
 
+// --- CSV'den bagimsiz film ekleme ---
+// Ayni rematch arama akisini kullanir: JustWatch'ta ara, sonuclardan birini
+// sec. Secilen film hem eslesme olarak cache'e hem de "manuel eklendi"
+// olarak sunucudaki overrides dosyasina yazilir - bir sonraki CSV
+// yuklemesinde/sayfa acilisinda kaybolmaz.
+
+function closeAddFilmModal() {
+  addFilmModal.classList.add("hidden");
+  addFilmBody.innerHTML = "";
+  addFilmSearchInput.value = "";
+}
+
+addFilmClose.addEventListener("click", closeAddFilmModal);
+addFilmModal.addEventListener("click", (e) => {
+  if (e.target === addFilmModal) closeAddFilmModal();
+});
+
+addFilmSearchBtn.addEventListener("click", () => {
+  const query = addFilmSearchInput.value.trim();
+  if (query) runAddFilmSearch(query);
+});
+addFilmSearchInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    addFilmSearchBtn.click();
+  }
+});
+
+function openAddFilmModal() {
+  addFilmModal.classList.remove("hidden");
+  addFilmTitleEl.textContent = t("addFilmTriggerTitle");
+  addFilmBody.innerHTML = "";
+  addFilmSearchInput.value = "";
+  addFilmSearchInput.focus();
+}
+
+async function runAddFilmSearch(query) {
+  addFilmBody.innerHTML = t("rematchSearching");
+
+  const res = await fetch("/api/rematch", {
+    method: "POST",
+    body: JSON.stringify({ title: query, year: "", country: countrySelect.value }),
+  });
+  const { candidates, error } = await res.json();
+
+  if (error || !candidates || !candidates.length) {
+    addFilmBody.textContent = error || t("rematchNoResults");
+    return;
+  }
+
+  renderCandidateGrid(addFilmBody, candidates, addFilm);
+}
+
+async function addFilm(candidate) {
+  addFilmBody.innerHTML = t("rematchSaving");
+  await fetch("/api/add-film", {
+    method: "POST",
+    body: JSON.stringify({
+      title: candidate.matched_title,
+      year: candidate.matched_year != null ? String(candidate.matched_year) : "",
+      candidate,
+      country: countrySelect.value,
+      preset: lastPreset,
+    }),
+  });
+  closeAddFilmModal();
+  if (lastCsvText) uploadCsv(lastCsvText, lastPreset);
+}
+
+async function removeFilm(uri) {
+  if (!confirm(t("removeFilmConfirm"))) return;
+  await fetch("/api/remove-film", {
+    method: "POST",
+    body: JSON.stringify({ uri, preset: lastPreset }),
+  });
+  if (lastCsvText) uploadCsv(lastCsvText, lastPreset);
+}
 
 function countNeedsReview(plan) {
   let count = 0;
@@ -1140,6 +1235,18 @@ function movieCard(movie, platformName, excludePlatforms) {
     poster.appendChild(reviewBtn);
   }
 
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "remove-toggle";
+  removeBtn.type = "button";
+  removeBtn.title = t("removeToggleTitle");
+  removeBtn.textContent = "✕";
+  removeBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    removeFilm(movie.uri);
+  });
+  poster.appendChild(removeBtn);
+
   const title = document.createElement("div");
   title.className = "movie-title";
   title.textContent = movie.title;
@@ -1211,6 +1318,18 @@ function rentBuyCard(movie) {
     poster.appendChild(reviewBtn);
   }
 
+  const removeBtn = document.createElement("button");
+  removeBtn.className = "remove-toggle";
+  removeBtn.type = "button";
+  removeBtn.title = t("removeToggleTitle");
+  removeBtn.textContent = "✕";
+  removeBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    removeFilm(movie.uri);
+  });
+  poster.appendChild(removeBtn);
+
   const title = document.createElement("div");
   title.className = "movie-title";
   title.textContent = movie.title;
@@ -1276,13 +1395,26 @@ function renderResults(plan) {
   sideTitle.className = "control-side-title";
   sideTitle.textContent = t("sidebarTitle");
   sideHeader.appendChild(sideTitle);
+  const headerBtns = document.createElement("div");
+  headerBtns.className = "control-side-header-btns";
+
+  const addFilmBtn = document.createElement("button");
+  addFilmBtn.type = "button";
+  addFilmBtn.className = "random-trigger-btn";
+  addFilmBtn.title = t("addFilmTriggerTitle");
+  addFilmBtn.textContent = "➕";
+  addFilmBtn.addEventListener("click", openAddFilmModal);
+  headerBtns.appendChild(addFilmBtn);
+
   const randomBtn = document.createElement("button");
   randomBtn.type = "button";
   randomBtn.className = "random-trigger-btn";
   randomBtn.title = t("randomTriggerTitle");
   randomBtn.textContent = "🎲";
   randomBtn.addEventListener("click", showRandomPick);
-  sideHeader.appendChild(randomBtn);
+  headerBtns.appendChild(randomBtn);
+
+  sideHeader.appendChild(headerBtns);
   controlSideEl.appendChild(sideHeader);
 
   let sawCategory = false;

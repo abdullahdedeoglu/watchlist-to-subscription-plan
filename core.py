@@ -85,6 +85,28 @@ def load_csv(path: str) -> list[dict]:
         return parse_csv_text(f.read())
 
 
+def apply_overrides(rows: list[dict], overrides: dict | None) -> list[dict]:
+    """CSV'den bagimsiz elle eklenen/cikarilan filmleri satirlara uygular.
+
+    overrides: {"added": [{"uri", "title", "year"}, ...], "removed": [uri, ...]}
+    Boylece kullanici Letterboxd'dan tekrar export almadan watchlist'ine
+    film ekleyip cikarabilir - tercih sunucuda ayri bir dosyada saklanir ve
+    her CSV yuklemesinde/yeniden acilista yeniden uygulanir.
+    """
+    if not overrides:
+        return rows
+    removed = set(overrides.get("removed", []))
+    rows = [row for row in rows if row["uri"] not in removed]
+    existing_uris = {row["uri"] for row in rows}
+    for added in overrides.get("added", []):
+        uri = added["uri"]
+        if uri in removed or uri in existing_uris:
+            continue
+        rows.append({"date": "", "title": added["title"], "year": added["year"], "uri": uri})
+        existing_uris.add(uri)
+    return rows
+
+
 def _migrate_entry(uri: str, entry: dict) -> dict:
     """Eski format (ulke bazsiz, sadece TR icin) kaydi yeni 'by_country'
     yapisina tasir. Eski veri kaybolmasin diye TR altina yerlestirilir."""
@@ -399,6 +421,7 @@ def process(
     cache_file: Path = CACHE_FILE,
     progress=None,
     owned_platforms: list[str] | None = None,
+    overrides: dict | None = None,
 ) -> dict:
     """Tam pipeline: CSV metni -> plan. sync.py ve server.py bunu kullanir."""
     if country not in COUNTRIES:
@@ -406,6 +429,7 @@ def process(
     language = language_for(country)
 
     rows = parse_csv_text(csv_text)
+    rows = apply_overrides(rows, overrides)
     cache = load_cache(cache_file)
     sync_info, errors = sync_cache(rows, cache, country, language, cache_file, progress=progress)
     plan = build_plan(cache, sync_info["current_uris"], country, owned_platforms=owned_platforms)

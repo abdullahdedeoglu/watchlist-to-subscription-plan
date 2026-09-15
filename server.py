@@ -43,6 +43,16 @@ PRESET_CACHE_FILES = {
     "letterboxd-top-500": Path(__file__).parent / "justwatch_cache_preset_letterboxd-top-500.json",
 }
 
+# Gercek watchlist ve her preset icin, CSV'den bagimsiz elle eklenen/cikarilan
+# filmleri tutar (bkz. core.apply_overrides). Boylece kullanici Letterboxd'dan
+# tekrar export almadan liste uzerinde oynama yapabilir; tercih CSV icerigine
+# degil, aktif "hangi liste" kimligine baglidir.
+MANUAL_OVERRIDES_FILE = Path(__file__).parent / "manual_overrides.json"
+PRESET_OVERRIDES_FILES = {
+    "imdb-top-250": Path(__file__).parent / "manual_overrides_preset_imdb-top-250.json",
+    "letterboxd-top-500": Path(__file__).parent / "manual_overrides_preset_letterboxd-top-500.json",
+}
+
 
 def resolve_cache_file(preset: str | None) -> Path:
     if preset is None:
@@ -51,6 +61,27 @@ def resolve_cache_file(preset: str | None) -> Path:
     if cache_file is None:
         raise ValueError(f"bilinmeyen preset: {preset}")
     return cache_file
+
+
+def resolve_overrides_file(preset: str | None) -> Path:
+    if preset is None:
+        return MANUAL_OVERRIDES_FILE
+    overrides_file = PRESET_OVERRIDES_FILES.get(preset)
+    if overrides_file is None:
+        raise ValueError(f"bilinmeyen preset: {preset}")
+    return overrides_file
+
+
+def load_overrides(overrides_file: Path) -> dict:
+    if not overrides_file.exists():
+        return {"added": [], "removed": []}
+    with open(overrides_file, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_overrides(overrides_file: Path, overrides: dict) -> None:
+    with open(overrides_file, "w", encoding="utf-8") as f:
+        json.dump(overrides, f, ensure_ascii=False, indent=2)
 
 
 JOBS: dict[str, dict] = {}
@@ -66,14 +97,21 @@ STATIC_FILES = {
 }
 
 
-def run_job(job_id: str, csv_text: str, country: str, owned_platforms: list, cache_file: Path) -> None:
+def run_job(
+    job_id: str, csv_text: str, country: str, owned_platforms: list, cache_file: Path, overrides: dict
+) -> None:
     def progress(done: int, total: int, title: str) -> None:
         with JOBS_LOCK:
             JOBS[job_id].update(done=done, total=total, current=title)
 
     try:
         plan = core.process(
-            csv_text, country=country, cache_file=cache_file, progress=progress, owned_platforms=owned_platforms
+            csv_text,
+            country=country,
+            cache_file=cache_file,
+            progress=progress,
+            owned_platforms=owned_platforms,
+            overrides=overrides,
         )
         with JOBS_LOCK:
             JOBS[job_id].update(status="done", result=plan)
@@ -218,6 +256,8 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 LAST_PRESET_FILE.write_text(preset, encoding="utf-8")
 
+            overrides = load_overrides(resolve_overrides_file(preset))
+
             job_id = uuid.uuid4().hex
             with JOBS_LOCK:
                 JOBS[job_id] = {
@@ -229,11 +269,76 @@ class Handler(BaseHTTPRequestHandler):
                     "error": None,
                 }
             thread = threading.Thread(
-                target=run_job, args=(job_id, csv_text, country, owned_platforms, cache_file), daemon=True
+                target=run_job,
+                args=(job_id, csv_text, country, owned_platforms, cache_file, overrides),
+                daemon=True,
             )
             thread.start()
 
             self._send_json({"job_id": job_id})
+            return
+
+        if self.path == "/api/add-film":
+            # CSV'den bagimsiz, elle bir film ekler: JustWatch'ta zaten aranip
+            # secilmis bir "candidate" cache'e senkron eslesme olarak yazilir
+            # (yeni bir arama tetiklemez), ve senkron bir "manual:" uri'si
+            # overrides dosyasina eklenir ki bir sonraki process() bu filmi
+            # CSV'de olmasa da listeye dahil etsin.
+            body = self._read_json_body()
+            title = body.get("title", "")
+            year = body.get("year", "")
+            country = (body.get("country") or core.DEFAULT_COUNTRY).upper()
+            candidate = body.get("candidate") or {}
+            preset = body.get("preset")
+
+            if not title or not candidate:
+                self._send_json({"error": "title ve candidate gerekli"}, status=400)
+                return
+
+            try:
+                cache_file = resolve_cache_file(preset)
+                overrides_file = resolve_overrides_file(preset)
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, status=400)
+                return
+
+            uri = f"manual:{uuid.uuid4().hex}"
+            cache = core.load_cache(cache_file)
+            core.confirm_match(cache, uri, title, year, country, candidate, cache_file)
+
+            overrides = load_overrides(overrides_file)
+            overrides.setdefault("added", []).append({"uri": uri, "title": title, "year": year})
+            save_overrides(overrides_file, overrides)
+
+            self._send_json({"ok": True, "uri": uri})
+            return
+
+        if self.path == "/api/remove-film":
+            # Aktif listeden (gercek CSV satiri olsa da olmasa da) bir filmi
+            # kalici olarak gizler - overrides dosyasindaki "removed" listesine
+            # eklenir, boylece her CSV yuklemesinde tekrar uygulanir.
+            body = self._read_json_body()
+            uri = body.get("uri", "")
+            preset = body.get("preset")
+
+            if not uri:
+                self._send_json({"error": "uri gerekli"}, status=400)
+                return
+
+            try:
+                overrides_file = resolve_overrides_file(preset)
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, status=400)
+                return
+
+            overrides = load_overrides(overrides_file)
+            removed = overrides.setdefault("removed", [])
+            if uri not in removed:
+                removed.append(uri)
+            overrides["added"] = [a for a in overrides.get("added", []) if a["uri"] != uri]
+            save_overrides(overrides_file, overrides)
+
+            self._send_json({"ok": True})
             return
 
         self._send_json({"error": "bulunamadi"}, status=404)
