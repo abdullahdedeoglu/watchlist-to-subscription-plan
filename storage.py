@@ -17,8 +17,19 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).parent
 
-UPSTASH_URL = os.environ.get("UPSTASH_REDIS_REST_URL", "").rstrip("/")
-UPSTASH_TOKEN = os.environ.get("UPSTASH_REDIS_REST_TOKEN", "")
+
+def _clean_env_value(value: str) -> str:
+    """Upstash panelindeki '.env' formatli satirlar (KEY="deger") oldugu gibi
+    kopyala-yapistirilirsa (isim + tirnaklarla birlikte) ortaya cikan yaygin
+    hatayi tolere eder - sadece gercek degeri cikarir."""
+    value = value.strip()
+    if "=" in value and not value.startswith(("http://", "https://")):
+        value = value.split("=", 1)[1]
+    return value.strip().strip('"').strip("'")
+
+
+UPSTASH_URL = _clean_env_value(os.environ.get("UPSTASH_REDIS_REST_URL", "")).rstrip("/")
+UPSTASH_TOKEN = _clean_env_value(os.environ.get("UPSTASH_REDIS_REST_TOKEN", ""))
 IS_PRODUCTION = bool(UPSTASH_URL and UPSTASH_TOKEN)
 
 
