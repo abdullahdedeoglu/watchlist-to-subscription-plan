@@ -131,14 +131,44 @@ def _migrate_entry(uri: str, entry: dict) -> dict:
 def load_cache(cache_file: Path = CACHE_FILE) -> dict:
     if not cache_file.exists():
         return {}
-    with open(cache_file, encoding="utf-8") as f:
-        raw = json.load(f)
+    raw = json.loads(cache_file.read_text(encoding="utf-8"))
     return {uri: _migrate_entry(uri, entry) for uri, entry in raw.items()}
 
 
 def save_cache(cache: dict, cache_file: Path = CACHE_FILE) -> None:
-    with open(cache_file, "w", encoding="utf-8") as f:
-        json.dump(cache, f, ensure_ascii=False, indent=2, sort_keys=True)
+    cache_file.write_text(
+        json.dumps(cache, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8"
+    )
+
+
+_CACHE_LOCKS: dict[str, threading.Lock] = {}
+_CACHE_LOCKS_GUARD = threading.Lock()
+
+
+def _cache_lock(cache_file: Path) -> threading.Lock:
+    key = str(cache_file)
+    with _CACHE_LOCKS_GUARD:
+        lock = _CACHE_LOCKS.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _CACHE_LOCKS[key] = lock
+        return lock
+
+
+def _merge_and_save(cache_file: Path, new_entries: dict[str, dict]) -> None:
+    """new_entries: {uri: full cache-entry dict}. Diskteki/Redis'teki en guncel
+    kopyayi tekrar okuyup sadece bu is'in bulduklarini uzerine birlestirir ve
+    kaydeder - ayni cache dosyasina ayni anda yazan baska bir istek (baska bir
+    kullanicinin aramasi) uzerine yazilmasin diye kilitli, kisa omurlu bir
+    islem. Aramalarin kendisi (yavas kisim) bu kilidin disinda kalir."""
+    if not new_entries:
+        return
+    with _cache_lock(cache_file):
+        fresh = load_cache(cache_file)
+        for uri, entry in new_entries.items():
+            target = fresh.setdefault(uri, {"title": entry.get("title"), "year": entry.get("year"), "by_country": {}})
+            target["by_country"].update(entry.get("by_country", {}))
+        save_cache(fresh, cache_file)
 
 
 def flatrate_offers(entry) -> list[dict]:
@@ -263,7 +293,7 @@ def confirm_match(cache: dict, uri: str, csv_title: str, csv_year: str, country:
         "needs_review": False,
         "manually_confirmed": True,
     }
-    save_cache(cache, cache_file)
+    _merge_and_save(cache_file, {uri: entry})
     return entry["by_country"][country]
 
 
@@ -306,6 +336,8 @@ def sync_cache(
                 progress(done_count, total, title)
         return key, result, error
 
+    new_entries: dict[str, dict] = {}
+
     with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_REQUESTS) as executor:
         futures = [executor.submit(run_one, key) for key in queries]
         for future in as_completed(futures):
@@ -314,6 +346,9 @@ def sync_cache(
                 if result is not None:
                     entry = cache.setdefault(row["uri"], {"title": row["title"], "year": row["year"], "by_country": {}})
                     entry["by_country"][country] = dict(result)
+                    new_entries.setdefault(
+                        row["uri"], {"title": row["title"], "year": row["year"], "by_country": {}}
+                    )["by_country"][country] = dict(result)
                 else:
                     errors.append({"title": row["title"], "year": row["year"], "uri": row["uri"], "error": error})
 
@@ -323,7 +358,7 @@ def sync_cache(
         if uri not in current_uris
     ]
 
-    save_cache(cache, cache_file)
+    _merge_and_save(cache_file, new_entries)
     return {"removed": removed, "current_uris": current_uris}, errors
 
 

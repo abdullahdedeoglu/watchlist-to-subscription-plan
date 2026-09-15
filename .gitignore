@@ -10,3 +10,4 @@ plan.json
 last_watchlist.csv
 last_preset.txt
 watchlist-*.csv
+sessions/

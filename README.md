@@ -152,6 +152,35 @@ raporlanir ama cache'ten silinmez.
 - `plan.json` - CLI'nin urettigi en son aylik plan
 - `requirements.txt` - Python bagimliliklari
 
+## Web sitesi olarak barındırma (opsiyonel)
+
+Bu proje, herkesin linkten girip watchlist'ini yükleyebileceği ücretsiz bir
+web sitesi olarak da barındırılabilir. Kod buna hazır (session bazlı
+kullanıcı ayrımı + Upstash Redis üzerinden kalıcı depolama), ama hesap açma
+adımlarını senin yapman gerekiyor:
+
+1. **Upstash** (ücretsiz, kredi kartsız): [upstash.com](https://upstash.com)
+   üzerinde hesap aç, "Create Database" ile bir Redis veritabanı oluştur.
+   Veritabanının sayfasında **REST API** bölümünden `UPSTASH_REDIS_REST_URL`
+   ve `UPSTASH_REDIS_REST_TOKEN` değerlerini kopyala.
+2. **Render** (ücretsiz, kredi kartsız): [render.com](https://render.com)
+   üzerinde hesap aç, "New" -> "Blueprint" ile bu GitHub reposunu bağla
+   (repodaki `render.yaml` build/start komutlarını otomatik doldurur).
+   Kurulum sırasında yukarıda kopyaladığın iki değeri `UPSTASH_REDIS_REST_URL`
+   / `UPSTASH_REDIS_REST_TOKEN` ortam değişkenlerine yapıştır.
+3. Render sana `https://<isim>.onrender.com` gibi gerçek, paylaşılabilir bir
+   link verir. Deploy bitince siteye giren herkes kendi watchlist'ini
+   yükleyebilir; JustWatch eşleştirme cache'i tüm ziyaretçiler arasında
+   paylaşılır (aynı filmi ikinci kez arayan olmaz), watchlist ve elle
+   eklenen/çıkarılan filmler ise görünmez bir session cookie ile kişiye özel
+   kalır.
+
+Bilinmesi gerekenler: ücretsiz Render katmanı 15 dakika hareketsizlikten
+sonra uykuya geçer, sıradaki ziyaretçi ~1 dakika soğuk başlangıç bekler; bu
+$0 kalarak ortadan kaldırılamıyor. `python server.py` ile yerel kullanım bu
+değişikliklerden etkilenmez - Upstash ortam değişkenleri yoksa her şey
+bugünkü gibi yerel dosyalara yazılır.
+
 ## Notlar
 
 - JustWatch'un resmi olmayan GraphQL API'sini kullanan

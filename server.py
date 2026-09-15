@@ -10,7 +10,10 @@ platform bazli gorsel kartlar halinde gosterilir. Kapatmak icin bu
 terminal penceresini kapat / Ctrl+C.
 """
 
+import http.cookies
 import json
+import os
+import re
 import sys
 import threading
 import time
@@ -20,6 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import core
+import storage
 
 try:
     sys.stdout.reconfigure(encoding="utf-8")
@@ -27,61 +31,80 @@ except AttributeError:
     pass
 
 WEB_DIR = Path(__file__).parent / "web"
-LAST_WATCHLIST_FILE = Path(__file__).parent / "last_watchlist.csv"
-# Aktif watchlist bir preset ise (IMDb/Letterboxd) hangisi oldugunu tutar -
-# boylece sayfa yeniden acildiginda dogru preset cache'i ile eslenir.
-LAST_PRESET_FILE = Path(__file__).parent / "last_preset.txt"
-HOST = "127.0.0.1"
-PORT = 8765
+PORT = int(os.environ.get("PORT", 8765))
+# PORT ortam degiskeni sadece bir hosting platformunda (Render vb.) calisirken
+# gelir - yerel kullanimda yokluk, 127.0.0.1'e (ve tarayiciyi otomatik acmaya)
+# geri duser.
+HOST = "0.0.0.0" if os.environ.get("PORT") else "127.0.0.1"
+
+SESSION_COOKIE_NAME = "wp_session"
+SESSION_ID_RE = re.compile(r"^[0-9a-f]{32}$")
 
 # Hazir listeler (dropzone'daki "IMDb Top 250" / "Letterboxd Top 500" butonlari)
-# kendi ayri JustWatch cache dosyalarini kullanir - boylece kullanicinin
-# gercek watchlist'inin cache'ine (justwatch_cache.json) karismaz ve
-# "Watchlist'ten cikmis" karsilastirmasini bozmaz.
+# kendi ayri, PAYLASIMLI (session'a gore degil) JustWatch cache dosyalarini
+# kullanir - boylece kullanicinin gercek watchlist'inin cache'ine
+# (justwatch_cache.json) karismaz ve "Watchlist'ten cikmis" karsilastirmasini
+# bozmaz. Bu cache'ler kasitli olarak global: bir filmi kim ararsa arasin
+# herkes icin cache'lenir, kullanici sayisi arttikca JustWatch'a giden toplam
+# istek artmaz.
 PRESET_CACHE_FILES = {
-    "imdb-top-250": Path(__file__).parent / "justwatch_cache_preset_imdb-top-250.json",
-    "letterboxd-top-500": Path(__file__).parent / "justwatch_cache_preset_letterboxd-top-500.json",
-}
-
-# Gercek watchlist ve her preset icin, CSV'den bagimsiz elle eklenen/cikarilan
-# filmleri tutar (bkz. core.apply_overrides). Boylece kullanici Letterboxd'dan
-# tekrar export almadan liste uzerinde oynama yapabilir; tercih CSV icerigine
-# degil, aktif "hangi liste" kimligine baglidir.
-MANUAL_OVERRIDES_FILE = Path(__file__).parent / "manual_overrides.json"
-PRESET_OVERRIDES_FILES = {
-    "imdb-top-250": Path(__file__).parent / "manual_overrides_preset_imdb-top-250.json",
-    "letterboxd-top-500": Path(__file__).parent / "manual_overrides_preset_letterboxd-top-500.json",
+    "imdb-top-250": storage.make_path("justwatch_cache_preset_imdb-top-250.json"),
+    "letterboxd-top-500": storage.make_path("justwatch_cache_preset_letterboxd-top-500.json"),
 }
 
 
-def resolve_cache_file(preset: str | None) -> Path:
+def resolve_cache_file(preset: str | None):
     if preset is None:
-        return core.CACHE_FILE
+        return storage.make_path("justwatch_cache.json")
     cache_file = PRESET_CACHE_FILES.get(preset)
     if cache_file is None:
         raise ValueError(f"bilinmeyen preset: {preset}")
     return cache_file
 
 
-def resolve_overrides_file(preset: str | None) -> Path:
+def session_watchlist_file(session_id: str):
+    return storage.make_path(f"sessions/{session_id}/last_watchlist.csv")
+
+
+def session_preset_file(session_id: str):
+    return storage.make_path(f"sessions/{session_id}/last_preset.txt")
+
+
+# Gercek watchlist ve her preset icin, CSV'den bagimsiz elle eklenen/cikarilan
+# filmleri tutar (bkz. core.apply_overrides). Boylece kullanici Letterboxd'dan
+# tekrar export almadan liste uzerinde oynama yapabilir. Bu, cache'in aksine,
+# ziyaretcinin kendi session'ina ozeldir - baskasinin eklediginin sende
+# gorunmemesi gerekir.
+def resolve_overrides_file(session_id: str, preset: str | None):
     if preset is None:
-        return MANUAL_OVERRIDES_FILE
-    overrides_file = PRESET_OVERRIDES_FILES.get(preset)
-    if overrides_file is None:
+        return storage.make_path(f"sessions/{session_id}/manual_overrides.json")
+    if preset not in PRESET_CACHE_FILES:
         raise ValueError(f"bilinmeyen preset: {preset}")
-    return overrides_file
+    return storage.make_path(f"sessions/{session_id}/manual_overrides_preset_{preset}.json")
 
 
-def load_overrides(overrides_file: Path) -> dict:
+def load_overrides(overrides_file) -> dict:
     if not overrides_file.exists():
         return {"added": [], "removed": []}
-    with open(overrides_file, encoding="utf-8") as f:
-        return json.load(f)
+    return json.loads(overrides_file.read_text(encoding="utf-8"))
 
 
-def save_overrides(overrides_file: Path, overrides: dict) -> None:
-    with open(overrides_file, "w", encoding="utf-8") as f:
-        json.dump(overrides, f, ensure_ascii=False, indent=2)
+def save_overrides(overrides_file, overrides: dict) -> None:
+    overrides_file.write_text(json.dumps(overrides, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _extract_session_id(cookie_header: str | None) -> str | None:
+    if not cookie_header:
+        return None
+    jar = http.cookies.SimpleCookie()
+    try:
+        jar.load(cookie_header)
+    except Exception:
+        return None
+    morsel = jar.get(SESSION_COOKIE_NAME)
+    if morsel and SESSION_ID_RE.match(morsel.value):
+        return morsel.value
+    return None
 
 
 JOBS: dict[str, dict] = {}
@@ -124,15 +147,36 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass  # sessiz terminal, hatalari yine de gorecegiz
 
+    def _ensure_session(self) -> None:
+        # Her ziyaretcinin gorunmez bir session cookie'si olur - watchlist'i
+        # ve elle ekledigi/cikardigi filmler bu kimlige gore ayrilir. JustWatch
+        # cache'i ise kasitli olarak buna bagli degil, herkes arasinda paylasilir.
+        sid = _extract_session_id(self.headers.get("Cookie"))
+        if sid is None:
+            sid = uuid.uuid4().hex
+            self._new_session = True
+        else:
+            self._new_session = False
+        self.session_id = sid
+
+    def _set_cookie_header(self) -> None:
+        if getattr(self, "_new_session", False):
+            self.send_header(
+                "Set-Cookie",
+                f"{SESSION_COOKIE_NAME}={self.session_id}; Path=/; Max-Age=31536000; HttpOnly; SameSite=Lax",
+            )
+
     def _send_json(self, payload: dict, status: int = 200) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self._set_cookie_header()
         self.end_headers()
         self.wfile.write(body)
 
     def do_GET(self):
+        self._ensure_session()
         path = self.path.split("?")[0]
 
         if path in STATIC_FILES:
@@ -142,6 +186,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
+            self._set_cookie_header()
             self.end_headers()
             self.wfile.write(body)
             return
@@ -166,9 +211,11 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/last-watchlist":
-            if LAST_WATCHLIST_FILE.exists():
-                preset = LAST_PRESET_FILE.read_text(encoding="utf-8").strip() if LAST_PRESET_FILE.exists() else None
-                self._send_json({"csv": LAST_WATCHLIST_FILE.read_text(encoding="utf-8"), "preset": preset or None})
+            watchlist_file = session_watchlist_file(self.session_id)
+            preset_file = session_preset_file(self.session_id)
+            if watchlist_file.exists():
+                preset = preset_file.read_text(encoding="utf-8").strip() if preset_file.exists() else None
+                self._send_json({"csv": watchlist_file.read_text(encoding="utf-8"), "preset": preset or None})
             else:
                 self._send_json({"csv": None, "preset": None})
             return
@@ -180,6 +227,7 @@ class Handler(BaseHTTPRequestHandler):
         return json.loads(self.rfile.read(length).decode("utf-8"))
 
     def do_POST(self):
+        self._ensure_session()
         if self.path == "/api/rematch":
             body = self._read_json_body()
             title = body.get("title", "")
@@ -216,17 +264,20 @@ class Handler(BaseHTTPRequestHandler):
 
         if self.path == "/api/clear-cache":
             # GELISTIRME ARACI - JustWatch eslestirme cache'ini sifirlar.
-            # Gelistirme bitince bu endpoint'i ve web/index.html + app.js'teki
-            # "dev-tools" bolumunu birlikte kaldir.
-            core.save_cache({}, core.CACHE_FILE)
+            # Prod'da (Upstash'e bagliyken) herkesin paylastigi cache'i rastgele
+            # bir ziyaretci silemesin diye kapali.
+            if storage.IS_PRODUCTION:
+                self._send_json({"error": "devre disi"}, status=403)
+                return
+            core.save_cache({}, storage.make_path("justwatch_cache.json"))
             self._send_json({"ok": True})
             return
 
         if self.path == "/api/clear-watchlist":
             # Aktif watchlist'i (gercek ya da preset fark etmez) kaldirir -
             # JustWatch cache'lerine dokunmaz, sadece "hatirlanan" isareti siler.
-            LAST_WATCHLIST_FILE.unlink(missing_ok=True)
-            LAST_PRESET_FILE.unlink(missing_ok=True)
+            session_watchlist_file(self.session_id).unlink(missing_ok=True)
+            session_preset_file(self.session_id).unlink(missing_ok=True)
             self._send_json({"ok": True})
             return
 
@@ -249,14 +300,15 @@ class Handler(BaseHTTPRequestHandler):
 
             # Aktif watchlist (gercek ya da preset) her zaman hatirlanir; hangi
             # preset oldugu ayri dosyada tutulur ki sayfa yeniden acildiginda
-            # dogru JustWatch cache dosyasi ile eslessin.
-            LAST_WATCHLIST_FILE.write_text(csv_text, encoding="utf-8")
+            # dogru JustWatch cache dosyasi ile eslessin. Bu, ziyaretcinin
+            # session'ina ozeldir - baskasinin watchlist'i sende gorunmez.
+            session_watchlist_file(self.session_id).write_text(csv_text, encoding="utf-8")
             if preset is None:
-                LAST_PRESET_FILE.unlink(missing_ok=True)
+                session_preset_file(self.session_id).unlink(missing_ok=True)
             else:
-                LAST_PRESET_FILE.write_text(preset, encoding="utf-8")
+                session_preset_file(self.session_id).write_text(preset, encoding="utf-8")
 
-            overrides = load_overrides(resolve_overrides_file(preset))
+            overrides = load_overrides(resolve_overrides_file(self.session_id, preset))
 
             job_id = uuid.uuid4().hex
             with JOBS_LOCK:
@@ -297,7 +349,7 @@ class Handler(BaseHTTPRequestHandler):
 
             try:
                 cache_file = resolve_cache_file(preset)
-                overrides_file = resolve_overrides_file(preset)
+                overrides_file = resolve_overrides_file(self.session_id, preset)
             except ValueError as exc:
                 self._send_json({"error": str(exc)}, status=400)
                 return
@@ -326,7 +378,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
 
             try:
-                overrides_file = resolve_overrides_file(preset)
+                overrides_file = resolve_overrides_file(self.session_id, preset)
             except ValueError as exc:
                 self._send_json({"error": str(exc)}, status=400)
                 return
@@ -346,10 +398,12 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> None:
     server = ThreadingHTTPServer((HOST, PORT), Handler)
-    url = f"http://{HOST}:{PORT}"
+    is_hosted = bool(os.environ.get("PORT"))
+    url = f"http://localhost:{PORT}" if is_hosted else f"http://{HOST}:{PORT}"
     print(f"Sunucu calisiyor: {url}")
     print("Kapatmak icin bu pencereyi kapat ya da Ctrl+C.")
-    threading.Timer(0.5, lambda: webbrowser.open(url)).start()
+    if not is_hosted:
+        threading.Timer(0.5, lambda: webbrowser.open(url)).start()
     try:
         server.serve_forever()
     except KeyboardInterrupt:
