@@ -21,6 +21,7 @@ const randomClose = document.getElementById("random-close");
 const randomBody = document.getElementById("random-body");
 const randomPoolPanelEl = document.getElementById("random-pool-panel");
 const randomPoolChipsEl = document.getElementById("random-pool-chips");
+const clearWatchlistBtn = document.getElementById("clear-watchlist-btn");
 
 const OWNED_STORAGE_KEY = "watchlist-owned-platforms";
 const WATCHED_STORAGE_KEY = "watchlist-watched";
@@ -54,6 +55,13 @@ const I18N = {
     langLabel: "Dil",
     dropzoneText: "CSV dosyasını buraya sürükle",
     dropzoneSub: "Ya da tıkla ve seç",
+    presetImdb: "IMDb Top 250 yükle",
+    presetLetterboxd: "Letterboxd Top 500 yükle",
+    presetLoading: "Yükleniyor...",
+    presetConfirm: (count) =>
+      `Bu, JustWatch'ta ${count} film için tek seferlik büyük bir arama başlatacak. Zaten denediysen art arda tekrar tetiklemekten kaçın - JustWatch'un API'sini geçici olarak bloklayabilir. Devam edilsin mi?`,
+    clearWatchlistBtn: "Listeyi kaldır",
+    clearWatchlistBtnWorking: "Kaldırılıyor...",
     progressTitle: "JustWatch'ta aranıyor…",
     progressLoading: "Yükleniyor...",
     progressCacheCheck: "Cache kontrol ediliyor...",
@@ -122,6 +130,13 @@ const I18N = {
     langLabel: "Language",
     dropzoneText: "Drag your CSV file here",
     dropzoneSub: "Or click to choose",
+    presetImdb: "Load IMDb Top 250",
+    presetLetterboxd: "Load Letterboxd Top 500",
+    presetLoading: "Loading...",
+    presetConfirm: (count) =>
+      `This will run one big search for ${count} movies on JustWatch. If you've already tried it, avoid triggering it again back-to-back - it can get JustWatch's API to temporarily block you. Continue?`,
+    clearWatchlistBtn: "Remove list",
+    clearWatchlistBtnWorking: "Removing...",
     progressTitle: "Searching JustWatch…",
     progressLoading: "Loading...",
     progressCacheCheck: "Checking cache...",
@@ -298,6 +313,10 @@ async function loadCountries() {
 
 let lastCsvText = null;
 let lastRawPlan = null;
+// null = gercek watchlist, aksi halde tiklanan preset'in kimligi ("imdb-top-250" /
+// "letterboxd-top-500"). Ulke/dil degisince ya da dev-cache temizlenince ayni
+// veriyi yeniden yuklerken hangi cache/kalici depoyu kullanacagimizi belirler.
+let lastPreset = null;
 
 countrySelect?.addEventListener("change", () => {
   localStorage.setItem(COUNTRY_STORAGE_KEY, countrySelect.value);
@@ -305,16 +324,16 @@ countrySelect?.addEventListener("change", () => {
   if (localStorage.getItem(LANG_MANUAL_STORAGE_KEY) !== "1") {
     setLang(COUNTRY_DEFAULT_LANG[countrySelect.value] || "en", false);
   }
-  if (lastCsvText) uploadCsv(lastCsvText);
+  if (lastCsvText) uploadCsv(lastCsvText, lastPreset);
 });
 
 async function init() {
   await loadCountries();
   const res = await fetch("/api/last-watchlist");
-  const { csv } = await res.json();
+  const { csv, preset } = await res.json();
   if (csv) {
     lastCsvText = csv;
-    uploadCsv(csv);
+    uploadCsv(csv, preset || null);
   }
 }
 
@@ -334,7 +353,7 @@ if (new URLSearchParams(location.search).has("dev")) {
     await fetch("/api/clear-cache", { method: "POST" });
     devClearBtn.disabled = false;
     devClearBtn.textContent = t("devClearBtn");
-    if (lastCsvText) uploadCsv(lastCsvText);
+    if (lastCsvText) uploadCsv(lastCsvText, lastPreset);
   });
 }
 
@@ -568,6 +587,47 @@ fileInput.addEventListener("change", () => {
   if (fileInput.files[0]) handleFile(fileInput.files[0]);
 });
 
+for (const btn of document.querySelectorAll(".csv-action-btn[data-preset]")) {
+  btn.addEventListener("click", async () => {
+    if (!confirm(t("presetConfirm", btn.dataset.count))) return;
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = t("presetLoading");
+    try {
+      const res = await fetch(btn.dataset.preset);
+      const csvText = await res.text();
+      lastCsvText = csvText;
+      uploadCsv(csvText, btn.dataset.presetId);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  });
+}
+
+clearWatchlistBtn?.addEventListener("click", async () => {
+  const originalText = clearWatchlistBtn.textContent;
+  clearWatchlistBtn.disabled = true;
+  clearWatchlistBtn.textContent = t("clearWatchlistBtnWorking");
+  try {
+    await fetch("/api/clear-watchlist", { method: "POST" });
+  } finally {
+    clearWatchlistBtn.disabled = false;
+    clearWatchlistBtn.textContent = originalText;
+  }
+
+  if (currentPollTimer) clearInterval(currentPollTimer);
+  lastCsvText = null;
+  lastRawPlan = null;
+  lastPreset = null;
+  activePanelKey = null;
+  dropzone.classList.remove("compact");
+  progressPanel.classList.add("hidden");
+  summaryEl.classList.add("hidden");
+  resultsEl.classList.add("hidden");
+  footerEl.classList.add("hidden");
+});
+
 function handleFile(file) {
   if (!file.name.toLowerCase().endsWith(".csv")) {
     alert(t("fileTypeAlert"));
@@ -576,12 +636,13 @@ function handleFile(file) {
   const reader = new FileReader();
   reader.onload = () => {
     lastCsvText = reader.result;
-    uploadCsv(lastCsvText);
+    uploadCsv(lastCsvText, null);
   };
   reader.readAsText(file, "utf-8");
 }
 
-async function uploadCsv(csvText) {
+async function uploadCsv(csvText, preset = null) {
+  lastPreset = preset;
   activePanelKey = null;
   resultsEl.classList.add("hidden");
   summaryEl.classList.add("hidden");
@@ -597,6 +658,7 @@ async function uploadCsv(csvText) {
       csv: csvText,
       country: countrySelect.value,
       owned_platforms: getOwnedPlatforms(),
+      preset,
     }),
   });
   const { job_id } = await res.json();
@@ -983,10 +1045,11 @@ async function confirmMatch(movie, candidate) {
       year: movie.year,
       country: countrySelect.value,
       candidate,
+      preset: lastPreset,
     }),
   });
   closeRematchModal();
-  if (lastCsvText) uploadCsv(lastCsvText);
+  if (lastCsvText) uploadCsv(lastCsvText, lastPreset);
 }
 
 

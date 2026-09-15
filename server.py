@@ -28,8 +28,30 @@ except AttributeError:
 
 WEB_DIR = Path(__file__).parent / "web"
 LAST_WATCHLIST_FILE = Path(__file__).parent / "last_watchlist.csv"
+# Aktif watchlist bir preset ise (IMDb/Letterboxd) hangisi oldugunu tutar -
+# boylece sayfa yeniden acildiginda dogru preset cache'i ile eslenir.
+LAST_PRESET_FILE = Path(__file__).parent / "last_preset.txt"
 HOST = "127.0.0.1"
 PORT = 8765
+
+# Hazir listeler (dropzone'daki "IMDb Top 250" / "Letterboxd Top 500" butonlari)
+# kendi ayri JustWatch cache dosyalarini kullanir - boylece kullanicinin
+# gercek watchlist'inin cache'ine (justwatch_cache.json) karismaz ve
+# "Watchlist'ten cikmis" karsilastirmasini bozmaz.
+PRESET_CACHE_FILES = {
+    "imdb-top-250": Path(__file__).parent / "justwatch_cache_preset_imdb-top-250.json",
+    "letterboxd-top-500": Path(__file__).parent / "justwatch_cache_preset_letterboxd-top-500.json",
+}
+
+
+def resolve_cache_file(preset: str | None) -> Path:
+    if preset is None:
+        return core.CACHE_FILE
+    cache_file = PRESET_CACHE_FILES.get(preset)
+    if cache_file is None:
+        raise ValueError(f"bilinmeyen preset: {preset}")
+    return cache_file
+
 
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = threading.Lock()
@@ -39,16 +61,20 @@ STATIC_FILES = {
     "/index.html": ("index.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "application/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
+    "/presets/imdb-top-250.csv": ("presets/imdb-top-250.csv", "text/csv; charset=utf-8"),
+    "/presets/letterboxd-top-500.csv": ("presets/letterboxd-top-500.csv", "text/csv; charset=utf-8"),
 }
 
 
-def run_job(job_id: str, csv_text: str, country: str, owned_platforms: list) -> None:
+def run_job(job_id: str, csv_text: str, country: str, owned_platforms: list, cache_file: Path) -> None:
     def progress(done: int, total: int, title: str) -> None:
         with JOBS_LOCK:
             JOBS[job_id].update(done=done, total=total, current=title)
 
     try:
-        plan = core.process(csv_text, country=country, progress=progress, owned_platforms=owned_platforms)
+        plan = core.process(
+            csv_text, country=country, cache_file=cache_file, progress=progress, owned_platforms=owned_platforms
+        )
         with JOBS_LOCK:
             JOBS[job_id].update(status="done", result=plan)
     except Exception as exc:
@@ -103,9 +129,10 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/last-watchlist":
             if LAST_WATCHLIST_FILE.exists():
-                self._send_json({"csv": LAST_WATCHLIST_FILE.read_text(encoding="utf-8")})
+                preset = LAST_PRESET_FILE.read_text(encoding="utf-8").strip() if LAST_PRESET_FILE.exists() else None
+                self._send_json({"csv": LAST_WATCHLIST_FILE.read_text(encoding="utf-8"), "preset": preset or None})
             else:
-                self._send_json({"csv": None})
+                self._send_json({"csv": None, "preset": None})
             return
 
         self._send_json({"error": "bulunamadi"}, status=404)
@@ -132,13 +159,20 @@ class Handler(BaseHTTPRequestHandler):
             year = body.get("year", "")
             country = (body.get("country") or core.DEFAULT_COUNTRY).upper()
             candidate = body.get("candidate") or {}
+            preset = body.get("preset")
 
             if not uri or not candidate:
                 self._send_json({"error": "uri ve candidate gerekli"}, status=400)
                 return
 
-            cache = core.load_cache(core.CACHE_FILE)
-            entry = core.confirm_match(cache, uri, title, year, country, candidate, core.CACHE_FILE)
+            try:
+                cache_file = resolve_cache_file(preset)
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, status=400)
+                return
+
+            cache = core.load_cache(cache_file)
+            entry = core.confirm_match(cache, uri, title, year, country, candidate, cache_file)
             self._send_json({"ok": True, "entry": entry})
             return
 
@@ -150,17 +184,39 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"ok": True})
             return
 
+        if self.path == "/api/clear-watchlist":
+            # Aktif watchlist'i (gercek ya da preset fark etmez) kaldirir -
+            # JustWatch cache'lerine dokunmaz, sadece "hatirlanan" isareti siler.
+            LAST_WATCHLIST_FILE.unlink(missing_ok=True)
+            LAST_PRESET_FILE.unlink(missing_ok=True)
+            self._send_json({"ok": True})
+            return
+
         if self.path == "/api/upload":
             body = self._read_json_body()
             csv_text = body.get("csv", "")
             country = (body.get("country") or core.DEFAULT_COUNTRY).upper()
             owned_platforms = body.get("owned_platforms") or []
+            preset = body.get("preset")
 
             if country not in core.COUNTRIES:
                 self._send_json({"error": f"bilinmeyen ulke kodu: {country}"}, status=400)
                 return
 
+            try:
+                cache_file = resolve_cache_file(preset)
+            except ValueError as exc:
+                self._send_json({"error": str(exc)}, status=400)
+                return
+
+            # Aktif watchlist (gercek ya da preset) her zaman hatirlanir; hangi
+            # preset oldugu ayri dosyada tutulur ki sayfa yeniden acildiginda
+            # dogru JustWatch cache dosyasi ile eslessin.
             LAST_WATCHLIST_FILE.write_text(csv_text, encoding="utf-8")
+            if preset is None:
+                LAST_PRESET_FILE.unlink(missing_ok=True)
+            else:
+                LAST_PRESET_FILE.write_text(preset, encoding="utf-8")
 
             job_id = uuid.uuid4().hex
             with JOBS_LOCK:
@@ -172,7 +228,9 @@ class Handler(BaseHTTPRequestHandler):
                     "result": None,
                     "error": None,
                 }
-            thread = threading.Thread(target=run_job, args=(job_id, csv_text, country, owned_platforms), daemon=True)
+            thread = threading.Thread(
+                target=run_job, args=(job_id, csv_text, country, owned_platforms, cache_file), daemon=True
+            )
             thread.start()
 
             self._send_json({"job_id": job_id})

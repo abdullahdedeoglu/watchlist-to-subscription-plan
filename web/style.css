@@ -277,6 +277,52 @@ body::before {
 
 .dropzone.compact .dropzone-sub { display: none; }
 
+/* CSV alani altindaki hazir liste / kaldir butonlari */
+
+.csv-actions {
+  display: grid;
+  grid-template-columns: 2fr 2fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.csv-action-btn {
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: var(--f-body);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.csv-action-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.csv-action-btn:disabled { opacity: 0.6; cursor: default; }
+
+.csv-action-btn--clear:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+@media (max-width: 520px) {
+  .csv-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+  .csv-action-btn--clear {
+    grid-column: 1 / -1;
+  }
+}
+
 /* Progress */
 
 .progress-panel {

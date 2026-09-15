@@ -18,9 +18,11 @@ DEFAULT_COUNTRY = "TR"
 SEARCH_COUNT = 5
 # Ayni anda JustWatch'a atilacak istek sayisi. Ag gecikmesi tek tek istekleri
 # yavaslatiyordu, bu da darbogazdi (CPU degil). Cok yuksek bir deger resmi
-# olmayan API'yi tetikleyip rate-limit/IP engeline yol acabilir; 6 makul bir
-# orta nokta - istersen dusur/yukselt.
-MAX_CONCURRENT_REQUESTS = 6
+# olmayan API'yi tetikleyip rate-limit/IP engeline yol acabilir; 4 makul bir
+# orta nokta - istersen dusur/yukselt. (500+ filmlik buyuk presetleri test
+# ederken IP'nin gecici olarak 403 ile bloklandigi gozlemlendi - bu deger
+# hem hizi koruyup hem riski biraz azaltmak icin 6'dan dusuruldu.)
+MAX_CONCURRENT_REQUESTS = 4
 
 # Desteklenen ulkeler: kod -> {goruntulenen isim (tr/en), JustWatch dil kodu}.
 # Ulke isimleri arayuz dili tr/en icin ayri ayri tutulur; yeni bir arayuz dili

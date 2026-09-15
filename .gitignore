@@ -3,6 +3,8 @@ __pycache__/
 
 # Generated/cache data
 justwatch_cache.json
+justwatch_cache_preset_*.json
 plan.json
 last_watchlist.csv
+last_preset.txt
 watchlist-*.csv
