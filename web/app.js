@@ -42,8 +42,10 @@ const LANG_MANUAL_STORAGE_KEY = "watchlist-lang-manual";
 // hangi ulkelerin o dili varsayilan aldigini ekle.
 const I18N = {
   tr: {
-    pageTitle: "Watchlist Planı",
-    headerTitle: "Watchlist → Abonelik Planı",
+    pageTitle: "WatchPlan",
+    brandName: "WatchPlan",
+    feedbackLink: "Geri bildirim",
+    bmcLink: "☕ Kahve ısmarla",
     subtitle: "Letterboxd watchlist CSV'ni sürükle, hangi sırada hangi platforma abone olman gerektiğini gör.",
     howtoSummary: "Nasıl kullanılır?",
     howtoStep1: "Letterboxd'da <strong>Profil → Watchlist → Export watchlist</strong> yoluna git — bir <code>.csv</code> dosyası doğrudan iner (zip yok).",
@@ -121,8 +123,10 @@ const I18N = {
     removeFilmConfirm: "Bu film watchlist'ten kalıcı olarak kaldırılsın mı? (Letterboxd'daki gerçek watchlist'ini etkilemez, sadece bu araçtaki görünümü.)",
   },
   en: {
-    pageTitle: "Watchlist Plan",
-    headerTitle: "Watchlist → Subscription Plan",
+    pageTitle: "WatchPlan",
+    brandName: "WatchPlan",
+    feedbackLink: "Feedback",
+    bmcLink: "☕ Buy me a coffee",
     subtitle: "Drag in your Letterboxd watchlist CSV and see which order to subscribe to which platform.",
     howtoSummary: "How does this work?",
     howtoStep1: "Go to <strong>Profile → Watchlist → Export watchlist</strong> on Letterboxd — a <code>.csv</code> file downloads directly (no zip).",
