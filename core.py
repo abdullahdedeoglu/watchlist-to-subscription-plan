@@ -10,11 +10,12 @@ import json
 import re
 import threading
 import time
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from simplejustwatchapi.exceptions import JustWatchHttpError
-from simplejustwatchapi.justwatch import details, search
+from simplejustwatchapi.justwatch import details, popular, search
 
 CACHE_FILE = Path("justwatch_cache.json")
 DEFAULT_COUNTRY = "TR"
@@ -69,6 +70,25 @@ MAX_CONCURRENT_REQUESTS = 8
 # hatalarina) asiri tepki verip gereksiz yere hizlanip yavaslar dururuz;
 # cok buyuk olursa guvenli oldugunda bile hizlanmamiz cok uzun surer.
 _SUCCESSES_PER_INCREASE = 15
+
+# Faz 3: her film icin ayri ayri search() atmak yerine, JustWatch'in "popular"
+# (en cok bilinen/populer) kataloğunu birkac istekle topluca cekip yerel bir
+# index'e cikariyoruz - watchlist'teki cogu film zaten mainstream oldugu icin
+# bu index'te bulunur ve hic ag istegi gerekmeden aninda eslesir. Index
+# ulke basina paylasilir (tum kullanicilar/senkronizasyonlar ayni kopyayi
+# kullanir), obskur/az bilinen filmler icin yine eski tek-tek search() yoluna
+# dusulur - index sadece bir hizlandirma katmani, tek dogruluk kaynagi degil.
+#
+# JustWatch'in GraphQL API'si count=250+ istendiginde "page too large" hatasi
+# veriyor (canli test edildi) - 100, hata vermeden calistigi dogrulanan guvenli
+# bir sayfa boyutu. API'nin kendisi de offset+count >= 2000 oldugunda bos liste
+# donduruyor (bkz. simplejustwatchapi popular() docstring'i) - yani katalogun
+# tamami degil, en populer ~2000 baslik.
+POPULAR_PAGE_SIZE = 100
+POPULAR_MAX_OFFSET = 1999
+# Populer film siralamasi/kataloğu her gun degismez - 1 gunluk TTL, tazelik
+# ile JustWatch'a (ve Redis/disk yazma) ek yuk arasinda makul bir denge.
+POPULAR_INDEX_TTL_SECONDS = 24 * 60 * 60
 
 # JustWatch'in engelleme/rate-limit'i HTTP durum kodu olarak bildirdigi
 # vakalar (429 Too Many Requests, 403 Forbidden, 503 Service Unavailable).
@@ -180,7 +200,7 @@ _INFLIGHT_GUARD = threading.Lock()
 
 
 def _singleflight_search_movie(
-    title: str, year: str, country: str, language: str
+    title: str, year: str, country: str, language: str, popular_index: dict | None = None
 ) -> tuple[dict | None, str | None]:
     key = (title, year, country, language)
     with _INFLIGHT_GUARD:
@@ -197,7 +217,7 @@ def _singleflight_search_movie(
         return slot.result
 
     try:
-        slot.result = search_movie(title, year, country, language)
+        slot.result = search_movie(title, year, country, language, popular_index=popular_index)
     finally:
         with _INFLIGHT_GUARD:
             del _INFLIGHT[key]
@@ -470,6 +490,111 @@ def _year_matched_entry(results: list, target_year: int):
     return None
 
 
+def _normalize_title_key(title: str) -> str:
+    """Populer index'te ve watchlist aramasinda ayni basligi ayni anahtara
+    esler: kucuk harfe cevirir, aksan/ozel karakterleri sadelestirir
+    (unicodedata ile), harf/rakam disindaki her seyi (bosluk, noktalama)
+    atar. Sadece bir index anahtari - kullaniciya gosterilen baslik hep
+    JustWatch'in kendi entry.title'indan gelir, bu fonksiyonun ciktisi degil.
+    """
+    decomposed = unicodedata.normalize("NFKD", title or "")
+    ascii_only = decomposed.encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]", "", ascii_only.lower())
+
+
+def build_popular_index(country: str, language: str) -> dict[str, dict[str, dict]]:
+    """JustWatch'in "popular" katalogunu POPULAR_PAGE_SIZE'lik sayfalar halinde
+    tarayip {normalize_edilmis_baslik: {yil_str: candidate_dict}} seklinde
+    yerel bir index'e cikarir. Sadece filmlerle (object_types=MOVIE)
+    sinirlandirilir - watchlist'ler Letterboxd'dan geldigi icin hep film.
+
+    popular(), search()'un aksine serbest metin araması yapmaz - JustWatch'in
+    kendi katalog listesini dogrudan donduruyor, bu yuzden TR gibi ulkelerde
+    bile (search()'te gordugumuz fuzzy/alakasiz sonuc riski olmadan) guvenle
+    tam yil eslesmesi icin kullanilabilir.
+
+    Bir sayfa cekilirken hata olursa (agi kesintisi vb.) o ana kadar
+    toplananlarla index'i tamamlar - kismi bir index, hic index olmamasindan
+    iyidir (kalan basliklar zaten eski, tek-tek search() yoluna duser).
+    """
+    index: dict[str, dict[str, dict]] = {}
+    offset = 0
+    while offset <= POPULAR_MAX_OFFSET:
+        try:
+            page = _call_justwatch(
+                popular,
+                country=country,
+                language=language,
+                count=POPULAR_PAGE_SIZE,
+                offset=offset,
+                object_types="MOVIE",
+            )
+        except Exception:
+            break
+        if not page:
+            break
+        for entry in page:
+            if entry.release_year is None:
+                continue
+            year_bucket = index.setdefault(_normalize_title_key(entry.title), {})
+            year_bucket.setdefault(str(entry.release_year), entry_to_candidate(entry))
+        offset += POPULAR_PAGE_SIZE
+    return index
+
+
+def load_popular_index(cache_file: Path) -> dict | None:
+    """Diskteki/Redis'teki populer index'i TTL icindeyse doner, degilse
+    (yok/eski/bozuk) None doner - cagiran yeniden insa etmesi gerektigini
+    boylece anlar."""
+    if not cache_file.exists():
+        return None
+    try:
+        raw = json.loads(cache_file.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError, ValueError):
+        return None
+    built_at = raw.get("built_at")
+    if built_at is None or (time.time() - built_at) > POPULAR_INDEX_TTL_SECONDS:
+        return None
+    return raw.get("index")
+
+
+def save_popular_index(index: dict, cache_file: Path) -> None:
+    cache_file.write_text(
+        json.dumps({"built_at": time.time(), "index": index}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def ensure_popular_index(country: str, language: str, cache_file: Path) -> dict:
+    """TTL icinde taze bir populer index varsa onu doner, yoksa JustWatch'tan
+    yeniden insa edip kaydeder. Insa etmek ~20 istek suruyor ama sonuc ulke
+    basina paylasilir (tum kullanicilar/senkronizasyonlar), bu yuzden
+    POPULAR_INDEX_TTL_SECONDS boyunca tekrar tekrar insa edilmez."""
+    cached = load_popular_index(cache_file)
+    if cached is not None:
+        return cached
+    index = build_popular_index(country, language)
+    if index:
+        save_popular_index(index, cache_file)
+    return index
+
+
+def _lookup_popular_index(index: dict, title: str, target_year: int | None) -> dict | None:
+    """Index'te (baslik, tam yil) eslesmesi varsa candidate dict'inin bir
+    kopyasini doner, yoksa None. Yil bilinmiyorsa (target_year is None)
+    guvenli bir eslesme kriterimiz olmadigi icin index'e hic bakmiyoruz -
+    cagiran eski (results[0]) davranisina duser."""
+    if target_year is None or not index:
+        return None
+    year_bucket = index.get(_normalize_title_key(title))
+    if not year_bucket:
+        return None
+    candidate = year_bucket.get(str(target_year))
+    if candidate is None:
+        return None
+    return dict(candidate)
+
+
 def _fallback_identify_and_fetch(title: str, target_year: int, country: str, language: str):
     """Hedef ulkenin kendi dilinde guvenilir bir eslesme bulunamadiginda
     (bkz. search_movie) cagrilir.
@@ -499,7 +624,9 @@ def _fallback_identify_and_fetch(title: str, target_year: int, country: str, lan
         return None
 
 
-def search_movie(title: str, year: str, country: str, language: str) -> tuple[dict | None, str | None]:
+def search_movie(
+    title: str, year: str, country: str, language: str, popular_index: dict | None = None
+) -> tuple[dict | None, str | None]:
     """Returns (by_country_entry_dict, error_message).
 
     Ag/istek hatalarinda (None, hata_mesaji) doner - bu cache'lenmez, bir
@@ -509,13 +636,25 @@ def search_movie(title: str, year: str, country: str, language: str) -> tuple[di
     isaretler ve cagiran tarafindan (sync_cache) NEGATIVE_CACHE_TTL_SECONDS
     ile cache'lenir, boylece ayni "yok" cevabi icin tekrar tekrar istek
     atilmaz.
+
+    popular_index verilirse (bkz. ensure_popular_index - Faz 3), once orada
+    tam yil eslesmesi aranir; bulunursa JustWatch'a hic ag istegi atilmadan
+    aninda sonuc donulur. Bulunamazsa (obskur film, index'te yok) eskisi
+    gibi canli search()'e dusulur - index sadece bir hizlandirma katmani.
     """
+    target_year = _target_year(year)
+
+    indexed = _lookup_popular_index(popular_index, title, target_year) if popular_index else None
+    if indexed is not None:
+        indexed["needs_review"] = False
+        indexed["manually_confirmed"] = False
+        indexed["checked_at"] = time.time()
+        return indexed, None
+
     try:
         results = _call_justwatch(search, title, country=country, language=language, count=SEARCH_COUNT)
     except Exception as exc:  # network / rate limit / API errors
         return None, f"JustWatch istegi basarisiz: {exc}"
-
-    target_year = _target_year(year)
 
     if target_year is None:
         # CSV'de yil yoksa elimizde guvenilir bir filtre yok - eskisi gibi
@@ -651,6 +790,7 @@ def sync_cache(
     language: str,
     cache_file: Path = CACHE_FILE,
     progress=None,
+    popular_index_file: Path | None = None,
 ) -> tuple[dict, list[dict]]:
     """progress: opsiyonel callback(done, total, title) - her yeni/guncellenen film sonrasi cagirilir.
 
@@ -663,6 +803,10 @@ def sync_cache(
     arama yapilir, sonuc hepsine uygulanir. Cache'e yazma ve hata biriktirme
     sadece ana thread'de olur, bu yuzden kilit gerekmiyor - sadece ilerleme
     sayaci paylasildigi icin kilitli.
+
+    popular_index_file verilmezse ulkeye ozel bir varsayilan kullanilir
+    (bkz. ensure_popular_index - Faz 3). Aranacak film yoksa (todo_rows bos)
+    index hic yuklenmez/insa edilmez - bosuna is yapilmaz.
     """
     current_uris = {row["uri"] for row in rows}
     todo_rows = [row for row in rows if needs_lookup(cache, row["uri"], country)]
@@ -672,13 +816,25 @@ def sync_cache(
     for row in todo_rows:
         queries.setdefault((row["title"], row["year"]), []).append(row)
 
+    popular_index: dict = {}
+    if queries:
+        if popular_index_file is None:
+            popular_index_file = Path(f"justwatch_popular_index_{country}.json")
+        try:
+            popular_index = ensure_popular_index(country, language, popular_index_file)
+        except Exception:
+            # Populer index isteğe bagli bir hizlandirma - insa edilemezse
+            # (ornek: JustWatch tamamen erisilemez) tum senkronizasyonu
+            # bloklamak yerine eski tek-tek search() yoluna dususuruz.
+            popular_index = {}
+
     total = len(queries)
     done_count = 0
     progress_lock = threading.Lock()
 
     def run_one(key: tuple[str, str]):
         title, year = key
-        result, error = _singleflight_search_movie(title, year, country, language)
+        result, error = _singleflight_search_movie(title, year, country, language, popular_index)
         nonlocal done_count
         with progress_lock:
             done_count += 1
@@ -822,6 +978,7 @@ def process(
     progress=None,
     owned_platforms: list[str] | None = None,
     overrides: dict | None = None,
+    popular_index_file: Path | None = None,
 ) -> dict:
     """Tam pipeline: CSV metni -> plan. sync.py ve server.py bunu kullanir."""
     if country not in COUNTRIES:
@@ -831,7 +988,9 @@ def process(
     rows = parse_csv_text(csv_text)
     rows = apply_overrides(rows, overrides)
     cache = load_cache(cache_file)
-    sync_info, errors = sync_cache(rows, cache, country, language, cache_file, progress=progress)
+    sync_info, errors = sync_cache(
+        rows, cache, country, language, cache_file, progress=progress, popular_index_file=popular_index_file
+    )
     plan = build_plan(cache, sync_info["current_uris"], country, owned_platforms=owned_platforms)
     plan["errors"] = errors
     plan["removed_from_watchlist"] = sync_info["removed"]
