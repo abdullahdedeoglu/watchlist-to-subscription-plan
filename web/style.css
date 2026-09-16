@@ -607,6 +607,48 @@ body::before {
 
 .results { margin-top: 32px; }
 
+.movie-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.movie-search-input {
+  flex: 1;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 14px;
+  font-size: 13px;
+  font-family: var(--f-body);
+}
+
+.movie-search-input:focus { outline: 1px solid var(--accent); }
+
+.movie-search-clear {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-dim);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.movie-search-clear:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+.search-group { margin-top: 28px; }
+.search-group:first-child { margin-top: 0; }
+
 /* Kumanda paneli: solda sabit bir sira listesi (platform "biletleri" +
    kisayol satirlari), sagda sadece secili olanin icerigi. Sayfa boyu asagi
    kaydirmak yerine, tek panel icinde geziliyor - secim degisince sadece
