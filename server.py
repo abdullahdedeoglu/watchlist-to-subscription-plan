@@ -18,6 +18,7 @@ import sys
 import threading
 import time
 import traceback
+import urllib.error
 import urllib.request
 import uuid
 import webbrowser
@@ -176,8 +177,14 @@ def send_feedback_email(message: str, movie: dict | None) -> None:
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=10) as resp:
-        resp.read()
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            resp.read()
+    except urllib.error.HTTPError as exc:
+        # Resend hata govdesinde (JSON) neden reddedildigini aciklar -
+        # bunu loglamazsak sadece "403 Forbidden" gorup sebebi bilemeyiz.
+        print(f"Resend hatasi ({exc.code}): {exc.read().decode('utf-8', errors='replace')}")
+        raise
 
 STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
