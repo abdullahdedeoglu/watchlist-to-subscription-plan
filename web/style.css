@@ -838,6 +838,7 @@ body::before {
 .side-link {
   display: flex;
   justify-content: space-between;
+  gap: 8px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   font-size: 13px;
