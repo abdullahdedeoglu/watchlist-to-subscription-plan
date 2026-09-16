@@ -28,6 +28,8 @@ const addFilmClose = document.getElementById("add-film-close");
 const addFilmBody = document.getElementById("add-film-body");
 const addFilmSearchInput = document.getElementById("add-film-search-input");
 const addFilmSearchBtn = document.getElementById("add-film-search-btn");
+const movieSearchInput = document.getElementById("movie-search-input");
+const movieSearchClear = document.getElementById("movie-search-clear");
 
 const OWNED_STORAGE_KEY = "watchlist-owned-platforms";
 const WATCHED_STORAGE_KEY = "watchlist-watched";
@@ -121,6 +123,8 @@ const I18N = {
     addFilmTriggerTitle: "Film ekle",
     removeToggleTitle: "Listeden kaldır",
     removeFilmConfirm: "Bu film watchlist'ten kalıcı olarak kaldırılsın mı? (Letterboxd'daki gerçek watchlist'ini etkilemez, sadece bu araçtaki görünümü.)",
+    movieSearchPlaceholder: "Listende ara...",
+    searchNoResults: "Bu isimle eşleşen film bulunamadı.",
   },
   en: {
     pageTitle: "WatchPlan",
@@ -202,6 +206,8 @@ const I18N = {
     addFilmTriggerTitle: "Add a movie",
     removeToggleTitle: "Remove from list",
     removeFilmConfirm: "Permanently remove this movie from your watchlist here? (Doesn't touch your actual Letterboxd watchlist, just this tool's view of it.)",
+    movieSearchPlaceholder: "Search your list...",
+    searchNoResults: "No movie matches that name.",
   },
 };
 
@@ -420,6 +426,38 @@ function colorForPlatform(name) {
 // secili kaldigini hatirlar (izlendi/sahip-olunan degisince sifirlanmaz).
 let activePanelKey = null;
 
+// Watchlist'in kendi icinde ("bu filmi hangi platformda oneriyorsun?")
+// hizlica arama yapabilmek icin. Sunucuya gitmeden, elimizdeki plan
+// uzerinde normalize edilmis baslik karsilastirmasiyla filtreleniyor.
+let searchQuery = "";
+let lastDerivedPlan = null;
+
+function normalizeSearchText(value) {
+  return (value || "")
+    .toString()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
+function movieMatchesSearch(movie, normalizedQuery) {
+  return normalizeSearchText(movie.title).includes(normalizedQuery);
+}
+
+movieSearchInput?.addEventListener("input", () => {
+  searchQuery = normalizeSearchText(movieSearchInput.value.trim());
+  movieSearchClear.classList.toggle("hidden", !movieSearchInput.value);
+  if (lastDerivedPlan) renderResults(lastDerivedPlan);
+});
+
+movieSearchClear?.addEventListener("click", () => {
+  movieSearchInput.value = "";
+  searchQuery = "";
+  movieSearchClear.classList.add("hidden");
+  movieSearchInput.focus();
+  if (lastDerivedPlan) renderResults(lastDerivedPlan);
+});
+
 // Tek, duz bir platform listesi - grup yok. Sira, her platformun toplam
 // (izlenmemis) film sayisina gore sabittir ve sahip-olma isaretlemesinden
 // ETKILENMEZ, boylece bir platformu sahiplendiginde yeri degismez, kaybolmaz.
@@ -581,18 +619,107 @@ function panelForEntry(entry, plan) {
   panel.appendChild(sub);
   const grid = document.createElement("div");
   grid.className = "nowhere-grid";
-  for (const movie of plan.not_available_anywhere) {
-    const chip = document.createElement("span");
-    chip.className = "nowhere-chip" + (movie.needs_review ? " needs-review" : "");
-    const label = movie.needs_review ? " ⚠" : "";
-    chip.innerHTML = `${movie.title} <span class="yr">${movie.year}</span>${label}`;
-    if (movie.needs_review) {
-      chip.title = t("reviewToggleTitle");
-      chip.addEventListener("click", () => openRematchModal(movie));
-    }
-    grid.appendChild(chip);
-  }
+  for (const movie of plan.not_available_anywhere) grid.appendChild(nowhereChip(movie));
   panel.appendChild(grid);
+  return panel;
+}
+
+function nowhereChip(movie) {
+  const chip = document.createElement("span");
+  chip.className = "nowhere-chip" + (movie.needs_review ? " needs-review" : "");
+  const label = movie.needs_review ? " ⚠" : "";
+  chip.innerHTML = `${movie.title} <span class="yr">${movie.year}</span>${label}`;
+  if (movie.needs_review) {
+    chip.title = t("reviewToggleTitle");
+    chip.addEventListener("click", () => openRematchModal(movie));
+  }
+  return chip;
+}
+
+function searchGroup(labelText, labelClass, movies, buildGrid) {
+  const group = document.createElement("div");
+  group.className = "search-group";
+  const head = document.createElement("div");
+  head.className = "platform-header";
+  head.innerHTML = `
+    <span class="platform-name ${labelClass}">${labelText}</span>
+    <span class="platform-count">${t("movieCountLabel", movies.length)}</span>
+  `;
+  group.appendChild(head);
+  group.appendChild(buildGrid(movies));
+  return group;
+}
+
+function renderSearchPanel(plan, normalizedQuery) {
+  const panel = document.createElement("div");
+  panel.className = "panel active search-panel";
+
+  const groups = [];
+
+  const already = (plan.already_available || []).filter((m) => movieMatchesSearch(m, normalizedQuery));
+  if (already.length) {
+    groups.push(
+      searchGroup(t("statAlreadyOwned"), "cat-positive", already, (movies) => {
+        const grid = document.createElement("div");
+        grid.className = "control-grid";
+        for (const movie of movies) {
+          const hrefPlatform = (movie.offers || []).map((o) => o.platform).find((p) => plan.owned_platforms.includes(p));
+          grid.appendChild(movieCard(movie, hrefPlatform, plan.owned_platforms));
+        }
+        return grid;
+      })
+    );
+  }
+
+  const platforms = Object.keys(plan.platform_movies || {}).sort(
+    (a, b) => plan.platform_movies[b].length - plan.platform_movies[a].length
+  );
+  for (const platform of platforms) {
+    const matches = (plan.platform_movies[platform] || []).filter((m) => movieMatchesSearch(m, normalizedQuery));
+    if (!matches.length) continue;
+    groups.push(
+      searchGroup(platform, "", matches, (movies) => {
+        const grid = document.createElement("div");
+        grid.className = "control-grid";
+        for (const movie of movies) grid.appendChild(movieCard(movie, platform));
+        return grid;
+      })
+    );
+  }
+
+  const rentbuy = (plan.rent_buy_available || []).filter((m) => movieMatchesSearch(m, normalizedQuery));
+  if (rentbuy.length) {
+    groups.push(
+      searchGroup(t("statRentBuy"), "cat-warn", rentbuy, (movies) => {
+        const grid = document.createElement("div");
+        grid.className = "control-grid";
+        for (const movie of movies) grid.appendChild(rentBuyCard(movie));
+        return grid;
+      })
+    );
+  }
+
+  const nowhere = (plan.not_available_anywhere || []).filter((m) => movieMatchesSearch(m, normalizedQuery));
+  if (nowhere.length) {
+    groups.push(
+      searchGroup(t("statNowhere"), "cat-dim", nowhere, (movies) => {
+        const grid = document.createElement("div");
+        grid.className = "nowhere-grid";
+        for (const movie of movies) grid.appendChild(nowhereChip(movie));
+        return grid;
+      })
+    );
+  }
+
+  if (!groups.length) {
+    const empty = document.createElement("p");
+    empty.className = "control-main-sub";
+    empty.textContent = t("searchNoResults");
+    panel.appendChild(empty);
+    return panel;
+  }
+
+  for (const group of groups) panel.appendChild(group);
   return panel;
 }
 
@@ -655,6 +782,9 @@ clearWatchlistBtn?.addEventListener("click", async () => {
   lastRawPlan = null;
   lastPreset = null;
   activePanelKey = null;
+  searchQuery = "";
+  if (movieSearchInput) movieSearchInput.value = "";
+  movieSearchClear?.classList.add("hidden");
   dropzone.classList.remove("compact");
   progressPanel.classList.add("hidden");
   summaryEl.classList.add("hidden");
@@ -678,6 +808,9 @@ function handleFile(file) {
 async function uploadCsv(csvText, preset = null) {
   lastPreset = preset;
   activePanelKey = null;
+  searchQuery = "";
+  if (movieSearchInput) movieSearchInput.value = "";
+  movieSearchClear?.classList.add("hidden");
   resultsEl.classList.add("hidden");
   summaryEl.classList.add("hidden");
   footerEl.classList.add("hidden");
@@ -1393,12 +1526,22 @@ function rentBuyCard(movie) {
 }
 
 function renderResults(plan) {
+  lastDerivedPlan = plan;
   const entries = controlRoomEntries(plan);
 
   if (!entries.length) {
     resultsEl.classList.add("hidden");
     return;
   }
+
+  if (searchQuery) {
+    controlSideEl.classList.add("hidden");
+    controlMainEl.innerHTML = "";
+    controlMainEl.appendChild(renderSearchPanel(plan, searchQuery));
+    resultsEl.classList.remove("hidden");
+    return;
+  }
+  controlSideEl.classList.remove("hidden");
 
   if (!activePanelKey || !entries.some((e) => e.key === activePanelKey)) {
     // Ilk acilista kategori kisayollari degil, gercek abonelik onerisi
