@@ -14,8 +14,36 @@ import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from httpx import HTTPError, HTTPStatusError
+from httpx import post as _http_post
+
 from simplejustwatchapi.exceptions import JustWatchHttpError
-from simplejustwatchapi.justwatch import details, popular, search
+from simplejustwatchapi.justwatch import _GRAPHQL_API_URL, details, popular, search
+
+# Faz 4 (GraphQL alias batching) icin simplejustwatchapi'nin PUBLIC OLMAYAN
+# (alt cizgili) ic fonksiyonlarina bagimliyiz - kutuphane birden fazla
+# basligi tek istekte aramayi desteklemiyor, bu yuzden ham GraphQL sorgusunu
+# kendimiz kuruyor, sadece cevabi ayristirmak icin kutuphanenin kendi
+# _parse_entry'sini odunc aliyoruz (search()'un dondurdugu MediaEntry ile
+# BIREBIR ayni format olsun diye - kendi ayristirma kodumuzu yazip
+# tekrarlamak yerine). RISK: bu private fonksiyonlar kutuphanenin bir
+# sonraki surumunde adi/imzasi degisip sessizce bozulabilir. Bu yuzden
+# _resolve_batch() HER TURLU hatada (import hatasi dahil, AttributeError/
+# ImportError/TypeError de "Exception" altina girer) tum gruba eski,
+# guvenilir tek-tek search_movie() yoluna duser - batching asla tek
+# dogruluk kaynagi degil, sadece bir hizlandirma katmani.
+from simplejustwatchapi.query import (
+    _common_variables,
+    _filter_variables,
+    _locale_variables,
+    _parse_entry,
+    _raise_for_errors_in_response,
+)
+from simplejustwatchapi.graphql import (
+    _GRAPHQL_DETAILS_FRAGMENT,
+    _GRAPHQL_OFFER_FRAGMENT,
+    _GRAPHQL_PACKAGE_FRAGMENT,
+)
 
 CACHE_FILE = Path("justwatch_cache.json")
 DEFAULT_COUNTRY = "TR"
@@ -89,6 +117,17 @@ POPULAR_MAX_OFFSET = 1999
 # Populer film siralamasi/kataloğu her gun degismez - 1 gunluk TTL, tazelik
 # ile JustWatch'a (ve Redis/disk yazma) ek yuk arasinda makul bir denge.
 POPULAR_INDEX_TTL_SECONDS = 24 * 60 * 60
+
+# Faz 4: populer index'te bulunamayan (obskur film/yil uyusmazligi) filmler
+# icin GraphQL "alias batching" - birden fazla arama sorgusunu TEK istekte
+# birlestirip JustWatch'a giden toplam istek sayisini dusurur. Canli test
+# edildi: SEARCH_COUNT=10 ile 34 basliga kadar tek istekte calisiyor, 35'te
+# "operation has complexity 353150, which exceeds the limit of 350000"
+# hatasi aliniyor (yani JustWatch'in complexity siniri ~350000, basina
+# ~10090). BATCH_SIZE=20, bu sinirin epey altinda guvenli bir pay birakir -
+# JustWatch'in complexity hesaplamasi baslik uzunlugu/eslesme sayisina gore
+# hafifce degisebilir, sinira yapisik kalmak riskli.
+BATCH_SIZE = 20
 
 # JustWatch'in engelleme/rate-limit'i HTTP durum kodu olarak bildirdigi
 # vakalar (429 Too Many Requests, 403 Forbidden, 503 Service Unavailable).
@@ -595,6 +634,101 @@ def _lookup_popular_index(index: dict, title: str, target_year: int | None) -> d
     return dict(candidate)
 
 
+def _raw_batch_search(items: list[tuple[str, str]], country: str, language: str) -> dict[tuple[str, str], list]:
+    """simplejustwatchapi'nin search()'unu ELLE, GraphQL "alias batching" ile
+    coguletiyor: her (baslik, yil) cifti icin ayri bir `qN: popularTitles(...)`
+    alani ayni istekte, ortak fragment/degiskenleri paylasarak gonderiliyor -
+    boylece len(items) kadar ayri istek yerine TEK bir HTTP round-trip
+    yeterli oluyor. Kutuphanenin search()'unun ic mantigini birebir taklit
+    eder (bkz. simplejustwatchapi.query.prepare_search_request) - sadece
+    tek bir searchTitlesFilter yerine N tane, N ayri alias altinda.
+
+    len(items) BATCH_SIZE'i (cagiranin sorumlulugu) asarsa JustWatch'in
+    GraphQL complexity siniri asilir - bkz. BATCH_SIZE yorumu.
+
+    HTTP/JSON-seviyesi hatalari JustWatchHttpError'a cevirir (kutuphanenin
+    kendi _post_to_jw_graphql_api'siyle ayni davranis) - boylece _call_justwatch
+    icindeki 429/403/503 blok tespiti bu ham istek icin de calisir.
+    """
+    n = len(items)
+    var_decls = ", ".join(f"$q{i}: TitleFilter!" for i in range(n))
+    fields = "\n".join(
+        f"""    q{i}: popularTitles(country: $country, filter: $q{i}, first: $first, sortBy: POPULAR, sortRandomSeed: 0) {{
+        edges {{ node {{ ...TitleDetails __typename }} __typename }}
+        __typename
+    }}"""
+        for i in range(n)
+    )
+    query = (
+        f"""
+query GetSearchTitlesBatch(
+    $country: Country!, $language: Language!, $first: Int!,
+    $formatPoster: ImageFormat, $formatOfferIcon: ImageFormat,
+    $profile: PosterProfile, $backdropProfile: BackdropProfile,
+    $filter: OfferFilter!, {var_decls}
+) {{
+{fields}
+}}
+"""
+        + _GRAPHQL_DETAILS_FRAGMENT
+        + _GRAPHQL_OFFER_FRAGMENT
+        + _GRAPHQL_PACKAGE_FRAGMENT
+    )
+    variables = {"first": SEARCH_COUNT, **_common_variables(True), **_locale_variables(country, language)}
+    for i, (title, _year) in enumerate(items):
+        variables[f"q{i}"] = {"searchQuery": title, "packages": None, **_filter_variables(None, None, "MOVIE")}
+
+    request = {"operationName": "GetSearchTitlesBatch", "variables": variables, "query": query}
+    try:
+        response = _http_post(_GRAPHQL_API_URL, json=request, timeout=30)
+        response.raise_for_status()
+        payload = response.json()
+    except HTTPStatusError as exc:
+        raise JustWatchHttpError(str(exc), exc.response.text) from exc
+    except HTTPError as exc:
+        raise JustWatchHttpError(str(exc)) from exc
+    _raise_for_errors_in_response(payload)
+
+    out: dict[tuple[str, str], list] = {}
+    for i, key in enumerate(items):
+        node = (payload.get("data") or {}).get(f"q{i}") or {}
+        edges = node.get("edges", [])
+        out[key] = [_parse_entry(edge["node"]) for edge in edges]
+    return out
+
+
+def _resolve_batch(
+    items: list[tuple[str, str]], country: str, language: str
+) -> dict[tuple[str, str], tuple[dict, str | None]] | None:
+    """items: en fazla BATCH_SIZE tane (baslik, yil_str) cifti - populer
+    index'te bulunamamis, canli arama gereken sorgular. Direkt-ulke arama
+    sonuclarini TEK GraphQL istegiyle ceker (_raw_batch_search), sonra her
+    biri icin search_movie ile BIREBIR ayni karar mantigini
+    (_decide_direct_match + gerekirse tek tek US/en fallback) uygular.
+
+    Butun istek basarisiz olursa (ag hatasi, complexity limiti, kutuphanenin
+    private fonksiyonlarindaki beklenmedik bir uyumsuzluk...) None doner -
+    cagiran (sync_cache) bu grubu eski, guvenilir tek-tek search_movie()
+    yoluna birakir. Batching hicbir zaman tek dogruluk kaynagi degil, sadece
+    bir hizlandirma katmani.
+    """
+    try:
+        batch_results = _call_justwatch(_raw_batch_search, items, country=country, language=language)
+    except Exception:
+        return None
+
+    resolved: dict[tuple[str, str], tuple[dict, str | None]] = {}
+    for key in items:
+        title, year = key
+        target_year = _target_year(year)
+        results = batch_results.get(key, [])
+        chosen = _decide_direct_match(results, target_year, country)
+        if chosen is None and target_year is not None and country != FALLBACK_SEARCH_COUNTRY:
+            chosen = _fallback_identify_and_fetch(title, target_year, country, language)
+        resolved[key] = (_finalize_match(chosen, target_year), None)
+    return resolved
+
+
 def _fallback_identify_and_fetch(title: str, target_year: int, country: str, language: str):
     """Hedef ulkenin kendi dilinde guvenilir bir eslesme bulunamadiginda
     (bkz. search_movie) cagrilir.
@@ -622,6 +756,59 @@ def _fallback_identify_and_fetch(title: str, target_year: int, country: str, lan
         return _call_justwatch(details, identified.entry_id, country=country, language=language)
     except Exception:
         return None
+
+
+def _decide_direct_match(results: list, target_year: int | None, country: str):
+    """Dogrudan (hedef ulke) arama sonuclarindan hangi kaydin secilecegini
+    belirler - search_movie()'nin uc dallı karar mantigi, hem tekil hem
+    batch aramada (Faz 4) ortak kullanilsin diye ayri bir fonksiyona
+    cikarildi. results bos/None ise ya da hicbir aday secilemezse None doner
+    (cagiran, gerekiyorsa US/en fallback'e devreder)."""
+    if not results:
+        return None
+    if target_year is None:
+        # CSV'de yil yoksa elimizde guvenilir bir filtre yok - eskisi gibi
+        # ilk sonuca dusuyoruz, ama kontrol onerilir olarak isaretlenecek.
+        return results[0]
+    if country == FALLBACK_SEARCH_COUNTRY:
+        # Zaten en guvenilir/iyi indekslenmis katalogda ariyoruz (en/US) -
+        # yakin yil toleransi burada guvenli, ayrica bir fallback'e gerek yok.
+        return _year_matched_entry(results, target_year)
+    # Hedef ulkenin (TR gibi) kendi dilindeki aramasi bazen alakasiz/fuzzy
+    # sonuclar donduruyor, bu yuzden SADECE tam yil eslesmesine
+    # guveniyoruz (bkz. _year_matched_entry'nin docstring'i). Tam eslesme
+    # yoksa, yakin-ama-tam-degil bir TR sonucunu riske atmak yerine daha
+    # guvenilir olan US/en fallback'e devrediyoruz.
+    return _exact_year_entry(results, target_year)
+
+
+def _finalize_match(chosen, target_year: int | None) -> dict:
+    """chosen (secilen MediaEntry ya da None) -> cache'e yazilacak son
+    candidate/bulunamadi sozlugu. search_movie() ve batch arama yolunun
+    (Faz 4) ortak son adimi."""
+    if chosen is None:
+        # Ne dogrudan ne de (varsa) yedek arama guvenilir bir sonuc verdi -
+        # JustWatch'in dondurdugu sonuclarin aranan filmle alakasiz oldugu
+        # anlamina gelir (ornek: "On the Silver Globe" (1988) aramasinin
+        # "Doctor on the Edge" (2026) ile eslesmesi). Yanlis ama "eslesti"
+        # gibi gorunen bir sonucu sessizce cache'lemek yerine "bulunamadi"
+        # sayiyoruz - bu, negatif cache'e duser ve kullaniciya manuel
+        # eslestirme secenegi olarak gosterilir.
+        return {
+            "matched": False,
+            "needs_review": False,
+            "manually_confirmed": False,
+            "checked_at": time.time(),
+        }
+    # Yil eslesmediyse (ya da CSV'de yil yoksa) bu, tam eslesmeye
+    # dusulmedigi anlamina gelir - remake/ayni isimli baska film riski var,
+    # kontrol onerilir.
+    needs_review = target_year is None or chosen.release_year != target_year
+    candidate = entry_to_candidate(chosen)
+    candidate["needs_review"] = needs_review
+    candidate["manually_confirmed"] = False
+    candidate["checked_at"] = time.time()
+    return candidate
 
 
 def search_movie(
@@ -656,49 +843,11 @@ def search_movie(
     except Exception as exc:  # network / rate limit / API errors
         return None, f"JustWatch istegi basarisiz: {exc}"
 
-    if target_year is None:
-        # CSV'de yil yoksa elimizde guvenilir bir filtre yok - eskisi gibi
-        # ilk sonuca dusuyoruz, ama kontrol onerilir olarak isaretliyoruz.
-        chosen = results[0] if results else None
-    elif country == FALLBACK_SEARCH_COUNTRY:
-        # Zaten en guvenilir/iyi indekslenmis katalogda ariyoruz (en/US) -
-        # yakin yil toleransi burada guvenli, ayrica bir fallback'e gerek yok.
-        chosen = _year_matched_entry(results, target_year) if results else None
-    else:
-        # Hedef ulkenin (TR gibi) kendi dilindeki aramasi bazen alakasiz/fuzzy
-        # sonuclar donduruyor, bu yuzden SADECE tam yil eslesmesine
-        # guveniyoruz (bkz. _year_matched_entry'nin docstring'i). Tam eslesme
-        # yoksa, yakin-ama-tam-degil bir TR sonucunu riske atmak yerine daha
-        # guvenilir olan US/en fallback'e devrediyoruz.
-        chosen = _exact_year_entry(results, target_year) if results else None
-        if chosen is None:
-            chosen = _fallback_identify_and_fetch(title, target_year, country, language)
+    chosen = _decide_direct_match(results, target_year, country)
+    if chosen is None and target_year is not None and country != FALLBACK_SEARCH_COUNTRY:
+        chosen = _fallback_identify_and_fetch(title, target_year, country, language)
 
-    if chosen is None:
-        # Ne dogrudan ne de (varsa) yedek arama guvenilir bir sonuc verdi -
-        # JustWatch'in dondurdugu sonuclarin aranan filmle alakasiz oldugu
-        # anlamina gelir (ornek: "On the Silver Globe" (1988) aramasinin
-        # "Doctor on the Edge" (2026) ile eslesmesi). Yanlis ama "eslesti"
-        # gibi gorunen bir sonucu sessizce cache'lemek yerine "bulunamadi"
-        # sayiyoruz - bu, negatif cache'e duser ve kullaniciya manuel
-        # eslestirme secenegi olarak gosterilir.
-        return {
-            "matched": False,
-            "needs_review": False,
-            "manually_confirmed": False,
-            "checked_at": time.time(),
-        }, None
-
-    # Yil eslesmediyse (ya da CSV'de yil yoksa) bu, tam eslesmeye
-    # dusulmedigi anlamina gelir - remake/ayni isimli baska film riski var,
-    # kontrol onerilir.
-    needs_review = target_year is None or chosen.release_year != target_year
-
-    candidate = entry_to_candidate(chosen)
-    candidate["needs_review"] = needs_review
-    candidate["manually_confirmed"] = False
-    candidate["checked_at"] = time.time()
-    return candidate, None
+    return _finalize_match(chosen, target_year), None
 
 
 def search_candidates(
@@ -807,6 +956,13 @@ def sync_cache(
     popular_index_file verilmezse ulkeye ozel bir varsayilan kullanilir
     (bkz. ensure_popular_index - Faz 3). Aranacak film yoksa (todo_rows bos)
     index hic yuklenmez/insa edilmez - bosuna is yapilmaz.
+
+    Index'te bulunamayan sorgular Faz 4 (GraphQL alias batching) ile
+    BATCH_SIZE'lik gruplar halinde onceden coguldan cozulmeye calisilir
+    (bkz. _resolve_batch) - basarili olanlar prefetched'e yazilir, run_one()
+    asagida once oraya bakar. Bir grup basarisiz olursa (ag hatasi,
+    complexity limiti...) o grup icin prefetched bos kalir, ilgili sorgular
+    eskisi gibi tek-tek (singleflight'li) search_movie()'ye duser.
     """
     current_uris = {row["uri"] for row in rows}
     todo_rows = [row for row in rows if needs_lookup(cache, row["uri"], country)]
@@ -828,18 +984,39 @@ def sync_cache(
             # bloklamak yerine eski tek-tek search() yoluna dususuruz.
             popular_index = {}
 
+    prefetched: dict[tuple[str, str], tuple[dict, str | None]] = {}
+    needs_live = [
+        key for key in queries
+        if _lookup_popular_index(popular_index, key[0], _target_year(key[1])) is None
+    ]
+    if needs_live:
+        batch_groups = [needs_live[i : i + BATCH_SIZE] for i in range(0, len(needs_live), BATCH_SIZE)]
+
+        def run_batch(group: list[tuple[str, str]]):
+            return _resolve_batch(group, country, language)
+
+        with ThreadPoolExecutor(max_workers=MAX_CONCURRENT_REQUESTS) as batch_executor:
+            batch_futures = [batch_executor.submit(run_batch, group) for group in batch_groups]
+            for future in as_completed(batch_futures):
+                resolved = future.result()
+                if resolved is not None:
+                    prefetched.update(resolved)
+
     total = len(queries)
     done_count = 0
     progress_lock = threading.Lock()
 
     def run_one(key: tuple[str, str]):
-        title, year = key
-        result, error = _singleflight_search_movie(title, year, country, language, popular_index)
+        if key in prefetched:
+            result, error = prefetched[key]
+        else:
+            title, year = key
+            result, error = _singleflight_search_movie(title, year, country, language, popular_index)
         nonlocal done_count
         with progress_lock:
             done_count += 1
             if progress:
-                progress(done_count, total, title)
+                progress(done_count, total, key[0])
         return key, result, error
 
     new_entries: dict[str, dict] = {}
