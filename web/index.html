@@ -19,9 +19,9 @@
         <span class="brand-mark" aria-hidden="true">&#127916;</span>
         <span class="brand-name" data-i18n="brandName">WatchPlan</span>
       </div>
-      <!-- TODO: gercek Buy Me a Coffee ve feedback e-posta adresi olusturulunca asagidaki iki href'i guncelle -->
+      <!-- TODO: Shopier bagis linki gelince asagidaki href'i guncelle -->
       <nav class="top-links">
-        <a class="top-link" href="mailto:feedback@example.com" data-i18n="feedbackLink">Geri bildirim</a>
+        <button id="feedback-open" class="top-link" type="button" data-i18n="feedbackLink">Geri bildirim</button>
         <a class="top-link top-link--coffee" href="https://www.buymeacoffee.com/watchplan" target="_blank" rel="noopener noreferrer" data-i18n="bmcLink">&#9749; Kahve ısmarla</a>
       </nav>
     </div>
@@ -148,6 +148,28 @@
       <div id="random-pool-chips" class="owned-chips"></div>
     </details>
     <div id="random-body" class="modal-body"></div>
+  </div>
+</div>
+
+<div id="feedback-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" data-i18n="feedbackModalTitle">Geri bildirim</div>
+      <button id="feedback-close" class="modal-close" type="button">&times;</button>
+    </div>
+    <div class="modal-body">
+      <label class="feedback-field-label" for="feedback-movie-input" data-i18n="feedbackMovieLabel">Hangi film hakkında? (opsiyonel)</label>
+      <div class="feedback-movie-picker">
+        <input type="text" id="feedback-movie-input" class="movie-search-input" data-i18n-placeholder="feedbackMoviePlaceholder" placeholder="Listende ara..." autocomplete="off" />
+        <div id="feedback-movie-results" class="feedback-movie-results hidden"></div>
+      </div>
+      <div id="feedback-movie-selected" class="feedback-movie-selected hidden"></div>
+      <label class="feedback-field-label" for="feedback-message" data-i18n="feedbackMessageLabel">Mesajın</label>
+      <textarea id="feedback-message" class="feedback-textarea" data-i18n-placeholder="feedbackMessagePlaceholder" placeholder="Ne olduğunu anlat..." maxlength="3000"></textarea>
+      <div id="feedback-error" class="feedback-error hidden"></div>
+      <button id="feedback-submit" class="feedback-submit-btn" type="button" data-i18n="feedbackSubmitBtn">Gönder</button>
+      <div id="feedback-success" class="feedback-success hidden" data-i18n="feedbackThanks">Site veya film hatalarında geri dönütleriniz için teşekkürler! 🙏</div>
+    </div>
   </div>
 </div>
 

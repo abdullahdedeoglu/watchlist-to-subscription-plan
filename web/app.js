@@ -30,6 +30,16 @@ const addFilmSearchInput = document.getElementById("add-film-search-input");
 const addFilmSearchBtn = document.getElementById("add-film-search-btn");
 const movieSearchInput = document.getElementById("movie-search-input");
 const movieSearchClear = document.getElementById("movie-search-clear");
+const feedbackOpenBtn = document.getElementById("feedback-open");
+const feedbackModal = document.getElementById("feedback-modal");
+const feedbackClose = document.getElementById("feedback-close");
+const feedbackMovieInput = document.getElementById("feedback-movie-input");
+const feedbackMovieResults = document.getElementById("feedback-movie-results");
+const feedbackMovieSelected = document.getElementById("feedback-movie-selected");
+const feedbackMessage = document.getElementById("feedback-message");
+const feedbackErrorEl = document.getElementById("feedback-error");
+const feedbackSubmitBtn = document.getElementById("feedback-submit");
+const feedbackSuccessEl = document.getElementById("feedback-success");
 
 const OWNED_STORAGE_KEY = "watchlist-owned-platforms";
 const WATCHED_STORAGE_KEY = "watchlist-watched";
@@ -48,6 +58,16 @@ const I18N = {
     brandName: "WatchPlan",
     feedbackLink: "Geri bildirim",
     bmcLink: "☕ Kahve ısmarla",
+    feedbackModalTitle: "Geri bildirim",
+    feedbackMovieLabel: "Hangi film hakkında? (opsiyonel)",
+    feedbackMoviePlaceholder: "Listende ara...",
+    feedbackMessageLabel: "Mesajın",
+    feedbackMessagePlaceholder: "Ne olduğunu anlat...",
+    feedbackSubmitBtn: "Gönder",
+    feedbackSubmitBtnWorking: "Gönderiliyor...",
+    feedbackThanks: "Site veya film hatalarında geri dönütleriniz için teşekkürler! 🙏",
+    feedbackEmptyError: "Bir mesaj yazmalısın.",
+    feedbackSendError: "Gönderilemedi, lütfen biraz sonra tekrar dene.",
     subtitle: "Letterboxd watchlist CSV'ni sürükle, hangi sırada hangi platforma abone olman gerektiğini gör.",
     howtoSummary: "Nasıl kullanılır?",
     howtoStep1: "Letterboxd'da <strong>Profil → Watchlist → Export watchlist</strong> yoluna git — bir <code>.csv</code> dosyası doğrudan iner (zip yok).",
@@ -133,6 +153,16 @@ const I18N = {
     brandName: "WatchPlan",
     feedbackLink: "Feedback",
     bmcLink: "☕ Buy me a coffee",
+    feedbackModalTitle: "Feedback",
+    feedbackMovieLabel: "Which movie is this about? (optional)",
+    feedbackMoviePlaceholder: "Search your list...",
+    feedbackMessageLabel: "Your message",
+    feedbackMessagePlaceholder: "Tell us what happened...",
+    feedbackSubmitBtn: "Send",
+    feedbackSubmitBtnWorking: "Sending...",
+    feedbackThanks: "Thanks for the feedback on site or movie issues! 🙏",
+    feedbackEmptyError: "You need to write a message.",
+    feedbackSendError: "Couldn't send, please try again in a bit.",
     subtitle: "Drag in your Letterboxd watchlist CSV and see which order to subscribe to which platform.",
     howtoSummary: "How does this work?",
     howtoStep1: "Go to <strong>Profile → Watchlist → Export watchlist</strong> on Letterboxd — a <code>.csv</code> file downloads directly (no zip).",
@@ -447,6 +477,153 @@ function normalizeSearchText(value) {
 function movieMatchesSearch(movie, normalizedQuery) {
   return normalizeSearchText(movie.title).includes(normalizedQuery);
 }
+
+// --- Geri bildirim modali ---
+// Kullanici isterse mevcut plan icinden bir film secip mesajina ekleyebilir
+// - JustWatch'ta neyle eslestigini (matched_title/matched_year) de mesaja
+// otomatik ekliyoruz, boylece yanlis eslesme bildirimlerinde manuel detay
+// yazmasina gerek kalmiyor.
+let feedbackSelectedMovie = null;
+
+function allPlanMovies(plan) {
+  if (!plan) return [];
+  const seen = new Set();
+  const out = [];
+  const push = (movie) => {
+    if (!movie || !movie.uri || seen.has(movie.uri)) return;
+    seen.add(movie.uri);
+    out.push(movie);
+  };
+  for (const movie of plan.already_available || []) push(movie);
+  for (const movies of Object.values(plan.platform_movies || {})) {
+    for (const movie of movies) push(movie);
+  }
+  for (const movie of plan.rent_buy_available || []) push(movie);
+  for (const movie of plan.not_available_anywhere || []) push(movie);
+  return out;
+}
+
+function closeFeedbackModal() {
+  feedbackModal.classList.add("hidden");
+}
+
+function clearFeedbackMovieSelection() {
+  feedbackSelectedMovie = null;
+  feedbackMovieSelected.classList.add("hidden");
+  feedbackMovieSelected.innerHTML = "";
+}
+
+function selectFeedbackMovie(movie) {
+  feedbackSelectedMovie = movie;
+  feedbackMovieInput.value = "";
+  feedbackMovieResults.classList.add("hidden");
+  feedbackMovieResults.innerHTML = "";
+
+  feedbackMovieSelected.innerHTML = "";
+  const label = document.createElement("span");
+  label.textContent = `${movie.title} (${movie.year})`;
+  const clearBtn = document.createElement("button");
+  clearBtn.type = "button";
+  clearBtn.className = "feedback-movie-selected-clear";
+  clearBtn.title = t("removeToggleTitle");
+  clearBtn.textContent = "×";
+  clearBtn.addEventListener("click", clearFeedbackMovieSelection);
+  feedbackMovieSelected.appendChild(label);
+  feedbackMovieSelected.appendChild(clearBtn);
+  feedbackMovieSelected.classList.remove("hidden");
+}
+
+function resetFeedbackForm() {
+  feedbackMovieInput.value = "";
+  feedbackMovieResults.classList.add("hidden");
+  feedbackMovieResults.innerHTML = "";
+  clearFeedbackMovieSelection();
+  feedbackMessage.value = "";
+  feedbackErrorEl.classList.add("hidden");
+  feedbackErrorEl.textContent = "";
+  feedbackSuccessEl.classList.add("hidden");
+  feedbackSubmitBtn.disabled = false;
+  feedbackSubmitBtn.classList.remove("hidden");
+  feedbackSubmitBtn.textContent = t("feedbackSubmitBtn");
+}
+
+feedbackOpenBtn.addEventListener("click", () => {
+  resetFeedbackForm();
+  feedbackModal.classList.remove("hidden");
+});
+
+feedbackClose.addEventListener("click", closeFeedbackModal);
+feedbackModal.addEventListener("click", (e) => {
+  if (e.target === feedbackModal) closeFeedbackModal();
+});
+
+feedbackMovieInput.addEventListener("input", () => {
+  const query = normalizeSearchText(feedbackMovieInput.value.trim());
+  feedbackMovieResults.innerHTML = "";
+  if (!query || !lastDerivedPlan) {
+    feedbackMovieResults.classList.add("hidden");
+    return;
+  }
+  const matches = allPlanMovies(lastDerivedPlan)
+    .filter((movie) => movieMatchesSearch(movie, query))
+    .slice(0, 8);
+  if (!matches.length) {
+    feedbackMovieResults.classList.add("hidden");
+    return;
+  }
+  for (const movie of matches) {
+    const row = document.createElement("div");
+    row.className = "feedback-movie-result-row";
+    const titleEl = document.createElement("span");
+    titleEl.textContent = movie.title;
+    const yearEl = document.createElement("span");
+    yearEl.className = "yr";
+    yearEl.textContent = movie.year;
+    row.appendChild(titleEl);
+    row.appendChild(yearEl);
+    row.addEventListener("click", () => selectFeedbackMovie(movie));
+    feedbackMovieResults.appendChild(row);
+  }
+  feedbackMovieResults.classList.remove("hidden");
+});
+
+feedbackSubmitBtn.addEventListener("click", async () => {
+  const message = feedbackMessage.value.trim();
+  feedbackErrorEl.classList.add("hidden");
+  if (!message) {
+    feedbackErrorEl.textContent = t("feedbackEmptyError");
+    feedbackErrorEl.classList.remove("hidden");
+    return;
+  }
+
+  feedbackSubmitBtn.disabled = true;
+  feedbackSubmitBtn.textContent = t("feedbackSubmitBtnWorking");
+  try {
+    const movie = feedbackSelectedMovie
+      ? {
+          title: feedbackSelectedMovie.title,
+          year: feedbackSelectedMovie.year,
+          matched_title: feedbackSelectedMovie.matched_title,
+          matched_year: feedbackSelectedMovie.matched_year,
+          uri: feedbackSelectedMovie.uri,
+        }
+      : null;
+    const res = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, movie }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "gonderilemedi");
+    feedbackSuccessEl.classList.remove("hidden");
+    feedbackSubmitBtn.classList.add("hidden");
+  } catch (err) {
+    feedbackErrorEl.textContent = t("feedbackSendError");
+    feedbackErrorEl.classList.remove("hidden");
+    feedbackSubmitBtn.disabled = false;
+    feedbackSubmitBtn.textContent = t("feedbackSubmitBtn");
+  }
+});
 
 movieSearchInput?.addEventListener("input", () => {
   searchQuery = normalizeSearchText(movieSearchInput.value.trim());
