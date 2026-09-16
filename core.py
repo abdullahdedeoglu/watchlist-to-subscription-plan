@@ -716,7 +716,16 @@ query GetSearchTitlesBatch(
     )
     variables = {"first": SEARCH_COUNT, **_common_variables(True), **_locale_variables(country, language)}
     for i, (title, _year) in enumerate(items):
-        variables[f"q{i}"] = {"searchQuery": title, "packages": None, **_filter_variables(None, None, "MOVIE")}
+        # object_types=None (search_movie()'nin duz search() cagrisiyla BIREBIR
+        # ayni - bkz. o cagri) - canli tespit edildi: objectTypes="MOVIE" filtresi
+        # JustWatch'in sonuc siralamasini/bilesimini degistiriyor, bazen tipi
+        # (yanlislikla?) MOVIE olan alakasiz bir TV icerigini (ornek: "Rick and
+        # Morty: Summer Meets God") filtresiz aramada hic gorunmeyen bir sekilde
+        # ilk 10'a soktu. Iki yol (batch/tekli) FARKLI bir istek atarsa
+        # _decide_direct_match/_finalize_match'in "birebir ayni karar mantigi"
+        # varsayimi bozulur - buradaki tek amac search_movie() ile AYNI JustWatch
+        # istegini atmak, batching sadece bunu coguletmeli, davranisini degil.
+        variables[f"q{i}"] = {"searchQuery": title, "packages": None, **_filter_variables(None, None, None)}
 
     request = {"operationName": "GetSearchTitlesBatch", "variables": variables, "query": query}
     try:
