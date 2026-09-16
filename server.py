@@ -14,12 +14,14 @@ import http.cookies
 import json
 import os
 import re
+import smtplib
 import sys
 import threading
 import time
 import traceback
 import uuid
 import webbrowser
+from email.message import EmailMessage
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -110,6 +112,61 @@ def _extract_session_id(cookie_header: str | None) -> str | None:
 
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = threading.Lock()
+
+# Site icinden geri bildirim formu - Gmail App Password ile SMTP uzerinden
+# watchplan.support@gmail.com adresine mail atar. Ortam degiskenleri
+# tanimli degilse (yerel gelistirme) gercekten SMTP denemez, sadece
+# konsola yazdirir - boylece gercek kimlik bilgisi olmadan da test edilebilir.
+FEEDBACK_TO_EMAIL = "watchplan.support@gmail.com"
+GMAIL_USER = os.environ.get("GMAIL_USER")
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
+
+FEEDBACK_MAX_LENGTH = 3000
+FEEDBACK_RATE_LIMIT = 5
+FEEDBACK_RATE_WINDOW = 3600  # saniye
+
+_FEEDBACK_TIMESTAMPS: dict[str, list[float]] = {}
+_FEEDBACK_LOCK = threading.Lock()
+
+
+def _feedback_rate_limited(session_id: str) -> bool:
+    now = time.time()
+    with _FEEDBACK_LOCK:
+        recent = [t for t in _FEEDBACK_TIMESTAMPS.get(session_id, []) if now - t < FEEDBACK_RATE_WINDOW]
+        limited = len(recent) >= FEEDBACK_RATE_LIMIT
+        recent.append(now)
+        _FEEDBACK_TIMESTAMPS[session_id] = recent
+        return limited
+
+
+def send_feedback_email(message: str, movie: dict | None) -> None:
+    lines = [message]
+    if movie:
+        lines.append("")
+        lines.append("--- Ilgili film ---")
+        lines.append(f"Baslik: {movie.get('title')} ({movie.get('year')})")
+        if movie.get("matched_title"):
+            lines.append(f"JustWatch eslesmesi: {movie.get('matched_title')} ({movie.get('matched_year')})")
+        if movie.get("uri"):
+            lines.append(f"Letterboxd URI: {movie.get('uri')}")
+    body = "\n".join(lines)
+
+    if not (GMAIL_USER and GMAIL_APP_PASSWORD):
+        print("=== GERI BILDIRIM (SMTP yapilandirilmadi, sadece logluyorum) ===")
+        print(body)
+        print("================================================================")
+        return
+
+    msg = EmailMessage()
+    msg["Subject"] = "WatchPlan Geri Bildirim" + (" (film ile ilgili)" if movie else "")
+    msg["From"] = GMAIL_USER
+    msg["To"] = FEEDBACK_TO_EMAIL
+    msg.set_content(body)
+
+    with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as smtp:
+        smtp.starttls()
+        smtp.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+        smtp.send_message(msg)
 
 STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
@@ -406,6 +463,31 @@ class Handler(BaseHTTPRequestHandler):
                 removed.append(uri)
             overrides["added"] = [a for a in overrides.get("added", []) if a["uri"] != uri]
             save_overrides(overrides_file, overrides)
+
+            self._send_json({"ok": True})
+            return
+
+        if self.path == "/api/feedback":
+            body = self._read_json_body()
+            message = (body.get("message") or "").strip()
+            movie = body.get("movie") or None
+
+            if not message:
+                self._send_json({"error": "mesaj bos olamaz"}, status=400)
+                return
+            if len(message) > FEEDBACK_MAX_LENGTH:
+                self._send_json({"error": "mesaj cok uzun"}, status=400)
+                return
+            if _feedback_rate_limited(self.session_id):
+                self._send_json({"error": "cok fazla istek, biraz sonra tekrar dene"}, status=429)
+                return
+
+            try:
+                send_feedback_email(message, movie)
+            except Exception:
+                traceback.print_exc()
+                self._send_json({"error": "gonderilemedi, lutfen sonra tekrar dene"}, status=500)
+                return
 
             self._send_json({"ok": True})
             return

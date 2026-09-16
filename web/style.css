@@ -127,6 +127,134 @@ body::before {
   background: rgba(217, 164, 65, 0.22);
 }
 
+button.top-link {
+  background: none;
+  appearance: none;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid transparent;
+  cursor: pointer;
+}
+
+/* Geri bildirim modali */
+
+.feedback-field-label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+  /* Ust ve alt bosluk esit - etiket, ustundeki eleman (baslik/kutu) ile
+     altindaki kutu arasinda dikeyde ortalanmis gorunsun diye. */
+  margin: 16px 0;
+}
+
+/* Kutucuklarin yuvarlak kose + border'i gozde soldan biraz icerde
+   baslıyormus gibi bir optik yanilsama yaratiyor - etiketle ayni
+   piksel x'inde olsalar bile "kaymis" gorunuyorlar. Kutulari 2px
+   sola cekerek bu illuzyonu telafi ediyoruz. */
+.feedback-movie-picker,
+.feedback-movie-selected,
+.feedback-textarea {
+  margin-left: -2px;
+}
+
+.feedback-movie-picker { position: relative; }
+
+.feedback-movie-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  z-index: 5;
+}
+
+.feedback-movie-result-row {
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.feedback-movie-result-row:hover { background: var(--accent-soft); }
+
+.feedback-movie-result-row .yr { color: var(--text-dim); font-family: var(--f-mono); font-size: 11px; }
+
+.feedback-movie-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--accent-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.feedback-movie-selected-clear {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+}
+
+.feedback-movie-selected-clear:hover { color: var(--text); }
+
+.feedback-textarea {
+  width: 100%;
+  min-height: 110px;
+  resize: vertical;
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--f-body);
+  font-size: 13px;
+  padding: 10px 12px;
+  box-sizing: border-box;
+}
+
+.feedback-textarea:focus { outline: none; border-color: var(--accent); }
+
+.feedback-error {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: #e3aba5;
+}
+
+.feedback-submit-btn {
+  margin-top: 14px;
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--f-body);
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.feedback-submit-btn:hover { background: rgba(217, 164, 65, 0.22); }
+
+.feedback-submit-btn:disabled { opacity: 0.6; cursor: default; }
+
+.feedback-success {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--positive);
+}
+
 .subtitle {
   color: var(--text-dim);
   font-size: 14.5px;
