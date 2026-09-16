@@ -29,7 +29,12 @@ import core
 import storage
 
 try:
-    sys.stdout.reconfigure(encoding="utf-8")
+    # line_buffering=True: Render (ve genel olarak dosyaya/pipe'a yonlendirilmis
+    # her stdout) print() ciktisini varsayilan olarak blok halinde tamponluyor -
+    # gercek bir hata olustugunda log ekraninda hemen gorunmuyor (bazen hic
+    # gorunmuyor), sadece traceback.print_exc()'in ayri kanali (stderr) hemen
+    # cikiyor. Satir satir flush ederek ikisini de anlik gorebiliyoruz.
+    sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
 except AttributeError:
     pass
 
