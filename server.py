@@ -249,7 +249,7 @@ class Handler(BaseHTTPRequestHandler):
             year = body.get("year", "")
             country = (body.get("country") or core.DEFAULT_COUNTRY).upper()
             language = core.language_for(country)
-            candidates, error = core.search_candidates(title, country, language)
+            candidates, error = core.search_candidates(title, country, language, target_year=year)
             self._send_json({"candidates": candidates, "error": error})
             return
 
