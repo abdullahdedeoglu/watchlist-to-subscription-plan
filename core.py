@@ -12,6 +12,7 @@ import threading
 import time
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from difflib import SequenceMatcher
 from pathlib import Path
 
 from httpx import HTTPError, HTTPStatusError
@@ -82,6 +83,16 @@ NEGATIVE_CACHE_TTL_SECONDS = 3 * 24 * 60 * 60
 # tolere ediyoruz. Daha buyuk bir fark, JustWatch'in aramaya alakasiz bir
 # sonuc dondurdugunun (baska bir film) isaretidir.
 YEAR_TOLERANCE = 1
+# US/en fallback aramasinda (bkz. _fallback_identify_and_fetch, _year_matched_entry)
+# aranan baslikla aday arasinda normalize edilmis metin benzerligi (difflib
+# SequenceMatcher.ratio) bu esigin altindaysa aday reddedilir - sadece yil
+# eslesmesine guvenmek yeterli degil (canli tespit edildi: "Cure" aramasi
+# alakasiz "Derman" ile, "Dead Man's Letters" alakasiz "The Walking Dead:
+# Dead City" ile SADECE ayni/yakin yil oldugu icin eslesiyordu). Bu kontrol
+# SADECE hedef dilin ingilizce oldugu US/en tarafinda guvenli - TR gibi
+# hedef ulke aramalarinda JustWatch basligi cevirdigi icin (bkz.
+# _year_matched_entry docstring'i) metin benzerligi orada kullanilmiyor.
+TITLE_SIMILARITY_THRESHOLD = 0.5
 # Ayni anda JustWatch'a atilacak istek sayisi icin baslangic degeri. Ag
 # gecikmesi tek tek istekleri yavaslatiyordu, bu da darbogazdi (CPU degil).
 # Gercek limit artik sabit degil - asagidaki _AdaptiveLimiter (AIMD) bu
@@ -496,7 +507,20 @@ def _exact_year_entry(results: list, target_year: int):
     return None
 
 
-def _year_matched_entry(results: list, target_year: int):
+def _title_similarity(a: str, b: str) -> float:
+    """Iki ONCEDEN normalize edilmis (_normalize_title_key) baslik arasinda
+    0-1 arasi bir benzerlik skoru. Biri digerinin icinde geciyorsa (alt
+    baslik eklenmis/cikarilmis varyantlar - 'Mad Max 2' / 'Mad Max 2 The
+    Road Warrior' gibi) tam benzer sayilir, aksi halde difflib'in karakter
+    dizisi benzerligine dusulur."""
+    if not a or not b:
+        return 0.0
+    if a in b or b in a:
+        return 1.0
+    return SequenceMatcher(None, a, b).ratio()
+
+
+def _year_matched_entry(results: list, target_year: int, query_title: str | None = None):
     """results icinde target_year ile tam eslesen bir kayit varsa onu, yoksa
     (YEAR_TOLERANCE icinde kalan) en yakin yillisini, o da yoksa None doner.
 
@@ -511,20 +535,36 @@ def _year_matched_entry(results: list, target_year: int):
     eslesme yoksa dogrudan US/en fallback'e devredilir - tolerans SADECE
     orada, guvenilir katalogda uygulanir.
 
-    Baslik metni burada kullanilmiyor: JustWatch sonucu hedef ulkenin dilinde
-    dondurur (ceviri), bu yuzden metin benzerligi guvenilir bir sinyal degil -
-    "Ice Age" vs "Buz Devri" gibi DOGRU bir eslesme bile dusuk metin
-    benzerligi verebilir. Yil, ceviriden bagimsiz ve bir filmin gercekten
-    ayni film olup olmadigini gosteren cok daha guvenilir bir isaret.
+    query_title verilirse (US/en aramada CSV basligi ve JustWatch sonucu
+    AYNI dilde oldugu icin bu her zaman verilmeli) ek bir guvenlik katmani
+    calisir: yila uyan adaylar arasindan baslik metnine EN BENZER olani
+    secilir, en iyi benzerlik bile TITLE_SIMILARITY_THRESHOLD'un altindaysa
+    None donulur - yani "yil tuttu ama baslik alakasiz" durumunda sessizce
+    yanlis bir filmi eslesmis gibi gostermek yerine "bulunamadi" sayilir
+    (bkz. TITLE_SIMILARITY_THRESHOLD yorumu, gercek 'Cure'/'Derman' vakasi).
+    query_title verilmezse (TR/hedef-ulke tarafinda kullanilmiyor zaten)
+    eski davranis (ilk/en yakin yillinin dogrudan kabulu) korunur.
     """
-    exact = _exact_year_entry(results, target_year)
-    if exact is not None:
-        return exact
+    exact = [e for e in results if e.release_year == target_year]
+    if exact:
+        if query_title is None:
+            return exact[0]
+        query_norm = _normalize_title_key(query_title)
+        best = max(exact, key=lambda e: _title_similarity(query_norm, _normalize_title_key(e.title)))
+        if _title_similarity(query_norm, _normalize_title_key(best.title)) < TITLE_SIMILARITY_THRESHOLD:
+            return None
+        return best
     candidates_with_year = [e for e in results if e.release_year is not None]
     if not candidates_with_year:
         return None
     closest = min(candidates_with_year, key=lambda e: abs(e.release_year - target_year))
     if abs(closest.release_year - target_year) <= YEAR_TOLERANCE:
+        if query_title is not None:
+            near = [e for e in candidates_with_year if abs(e.release_year - target_year) <= YEAR_TOLERANCE]
+            query_norm = _normalize_title_key(query_title)
+            closest = max(near, key=lambda e: _title_similarity(query_norm, _normalize_title_key(e.title)))
+            if _title_similarity(query_norm, _normalize_title_key(closest.title)) < TITLE_SIMILARITY_THRESHOLD:
+                return None
         return closest
     return None
 
@@ -722,7 +762,7 @@ def _resolve_batch(
         title, year = key
         target_year = _target_year(year)
         results = batch_results.get(key, [])
-        chosen = _decide_direct_match(results, target_year, country)
+        chosen = _decide_direct_match(results, target_year, country, title=title)
         if chosen is None and target_year is not None and country != FALLBACK_SEARCH_COUNTRY:
             chosen = _fallback_identify_and_fetch(title, target_year, country, language)
         resolved[key] = (_finalize_match(chosen, target_year), None)
@@ -749,7 +789,7 @@ def _fallback_identify_and_fetch(title: str, target_year: int, country: str, lan
         )
     except Exception:
         return None
-    identified = _year_matched_entry(fallback_results, target_year)
+    identified = _year_matched_entry(fallback_results, target_year, query_title=title)
     if identified is None:
         return None
     try:
@@ -758,12 +798,16 @@ def _fallback_identify_and_fetch(title: str, target_year: int, country: str, lan
         return None
 
 
-def _decide_direct_match(results: list, target_year: int | None, country: str):
+def _decide_direct_match(results: list, target_year: int | None, country: str, title: str | None = None):
     """Dogrudan (hedef ulke) arama sonuclarindan hangi kaydin secilecegini
     belirler - search_movie()'nin uc dallı karar mantigi, hem tekil hem
     batch aramada (Faz 4) ortak kullanilsin diye ayri bir fonksiyona
     cikarildi. results bos/None ise ya da hicbir aday secilemezse None doner
-    (cagiran, gerekiyorsa US/en fallback'e devreder)."""
+    (cagiran, gerekiyorsa US/en fallback'e devreder).
+
+    title, SADECE country FALLBACK_SEARCH_COUNTRY (US/en) oldugunda
+    _year_matched_entry'nin baslik-benzerligi guvenlik kontrolune gecirilir
+    - hedef ulke (TR gibi) tarafinda kullanilmiyor, bkz. o dalin yorumu."""
     if not results:
         return None
     if target_year is None:
@@ -773,7 +817,7 @@ def _decide_direct_match(results: list, target_year: int | None, country: str):
     if country == FALLBACK_SEARCH_COUNTRY:
         # Zaten en guvenilir/iyi indekslenmis katalogda ariyoruz (en/US) -
         # yakin yil toleransi burada guvenli, ayrica bir fallback'e gerek yok.
-        return _year_matched_entry(results, target_year)
+        return _year_matched_entry(results, target_year, query_title=title)
     # Hedef ulkenin (TR gibi) kendi dilindeki aramasi bazen alakasiz/fuzzy
     # sonuclar donduruyor, bu yuzden SADECE tam yil eslesmesine
     # guveniyoruz (bkz. _year_matched_entry'nin docstring'i). Tam eslesme
@@ -843,7 +887,7 @@ def search_movie(
     except Exception as exc:  # network / rate limit / API errors
         return None, f"JustWatch istegi basarisiz: {exc}"
 
-    chosen = _decide_direct_match(results, target_year, country)
+    chosen = _decide_direct_match(results, target_year, country, title=title)
     if chosen is None and target_year is not None and country != FALLBACK_SEARCH_COUNTRY:
         chosen = _fallback_identify_and_fetch(title, target_year, country, language)
 
