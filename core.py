@@ -7,11 +7,13 @@ Hem sync.py (CLI) hem de server.py (web arayuzu) bu modulu kullanir.
 import csv
 import io
 import json
+import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+from simplejustwatchapi.exceptions import JustWatchHttpError
 from simplejustwatchapi.justwatch import details, search
 
 CACHE_FILE = Path("justwatch_cache.json")
@@ -51,22 +53,112 @@ NEGATIVE_CACHE_TTL_SECONDS = 3 * 24 * 60 * 60
 # tolere ediyoruz. Daha buyuk bir fark, JustWatch'in aramaya alakasiz bir
 # sonuc dondurdugunun (baska bir film) isaretidir.
 YEAR_TOLERANCE = 1
-# Ayni anda JustWatch'a atilacak istek sayisi. Ag gecikmesi tek tek istekleri
-# yavaslatiyordu, bu da darbogazdi (CPU degil). Cok yuksek bir deger resmi
-# olmayan API'yi tetikleyip rate-limit/IP engeline yol acabilir; 4 makul bir
-# orta nokta - istersen dusur/yukselt. (500+ filmlik buyuk presetleri test
-# ederken IP'nin gecici olarak 403 ile bloklandigi gozlemlendi - bu deger
-# hem hizi koruyup hem riski biraz azaltmak icin 6'dan dusuruldu.)
-MAX_CONCURRENT_REQUESTS = 4
+# Ayni anda JustWatch'a atilacak istek sayisi icin baslangic degeri. Ag
+# gecikmesi tek tek istekleri yavaslatiyordu, bu da darbogazdi (CPU degil).
+# Gercek limit artik sabit degil - asagidaki _AdaptiveLimiter (AIMD) bu
+# baslangictan itibaren JustWatch'in tepkisine gore kendi kendine ayarlanir
+# (bkz. asagisi). (500+ filmlik buyuk presetleri test ederken IP'nin gecici
+# olarak 403 ile bloklandigi gozlemlenmisti - sabit deger yerine adaptif
+# limit hem bu riske hizli tepki verir hem de sorun yoksa elle mudahale
+# gerekmeden hizlanir.)
+INITIAL_CONCURRENT_REQUESTS = 4
+MIN_CONCURRENT_REQUESTS = 1
+MAX_CONCURRENT_REQUESTS = 8
+# Limit'i 1 arttirmadan once (additive increase) art arda kac basarili
+# cagri gormemiz gerektigi. Cok kucuk olursa gurultuye (tek seferlik ag
+# hatalarina) asiri tepki verip gereksiz yere hizlanip yavaslar dururuz;
+# cok buyuk olursa guvenli oldugunda bile hizlanmamiz cok uzun surer.
+_SUCCESSES_PER_INCREASE = 15
 
-# sync_cache() her cagrisinda kendi ThreadPoolExecutor'ini acar - bu sadece
-# TEK bir is (tek bir kullanicinin yuklemesi) icindeki aramalari sinirlar.
-# Birden fazla kullanici ayni anda yukleme yaparsa, her biri kendi 4'luk
-# havuzuyla calisir ve toplamda MAX_CONCURRENT_REQUESTS'in kat kat uzerine
-# cikilabilir. Asil JustWatch'a giden agi cagrisini (search()) sarmalayan bu
-# SURECI GENELINDE PAYLASILAN semafor, kac is/kullanici olursa olsun ayni
-# anda en fazla MAX_CONCURRENT_REQUESTS istek gitmesini garanti eder.
-_JUSTWATCH_SEMAPHORE = threading.Semaphore(MAX_CONCURRENT_REQUESTS)
+# JustWatch'in engelleme/rate-limit'i HTTP durum kodu olarak bildirdigi
+# vakalar (429 Too Many Requests, 403 Forbidden, 503 Service Unavailable).
+# Bunlari, GraphQL'in gecerli ama "sonuc yok" turu hatalarindan (orn. gecersiz
+# node ID) ayirt etmemiz lazim - sadece bunlar gercek bir "yavasla" isaretidir.
+_BLOCK_STATUS_RE = re.compile(r"\b(429|403|503)\b")
+
+
+def _looks_like_block(exc: Exception) -> bool:
+    return bool(_BLOCK_STATUS_RE.search(str(exc)))
+
+
+class _AdaptiveLimiter:
+    """Calisirken buyuklugu degistirilebilen bir concurrency limiti (AIMD).
+
+    threading.Semaphore'un aksine limit sabit degil: art arda basarili
+    cagrilardan sonra yavas yavas artar (additive increase), bir engelleme
+    isareti (429/403/503) gorulur gorulmez aninda yariya iner (multiplicative
+    decrease). Boylece "kac istek guvenli" sorusunun cevabini elle sabit bir
+    sayi secmek yerine calisirken kendimiz ogreniriz.
+    """
+
+    def __init__(self, initial: int, minimum: int, maximum: int, successes_per_increase: int):
+        self._limit = initial
+        self._min = minimum
+        self._max = maximum
+        self._successes_per_increase = successes_per_increase
+        self._active = 0
+        self._success_streak = 0
+        self._cond = threading.Condition()
+
+    def acquire(self) -> None:
+        with self._cond:
+            while self._active >= self._limit:
+                self._cond.wait()
+            self._active += 1
+
+    def release(self) -> None:
+        with self._cond:
+            self._active -= 1
+            self._cond.notify()
+
+    def report(self, blocked: bool) -> None:
+        with self._cond:
+            if blocked:
+                self._success_streak = 0
+                new_limit = max(self._min, self._limit // 2)
+                if new_limit != self._limit:
+                    self._limit = new_limit
+                    self._cond.notify_all()
+            else:
+                self._success_streak += 1
+                if self._success_streak >= self._successes_per_increase and self._limit < self._max:
+                    self._success_streak = 0
+                    self._limit += 1
+                    self._cond.notify_all()
+
+    @property
+    def current_limit(self) -> int:
+        with self._cond:
+            return self._limit
+
+
+_ADAPTIVE_LIMITER = _AdaptiveLimiter(
+    initial=INITIAL_CONCURRENT_REQUESTS,
+    minimum=MIN_CONCURRENT_REQUESTS,
+    maximum=MAX_CONCURRENT_REQUESTS,
+    successes_per_increase=_SUCCESSES_PER_INCREASE,
+)
+
+
+def _call_justwatch(fn, *args, **kwargs):
+    """search()/details() cagrilarini adaptif limiter'dan (yukarida) gecirir;
+    sonucu (basari/blok) limiter'a bildirip limitin buyumesine/kuculmesine
+    sebep olur. search_movie/search_candidates icindeki her JustWatch agi
+    cagrisi bunun uzerinden yapilir."""
+    _ADAPTIVE_LIMITER.acquire()
+    try:
+        result = fn(*args, **kwargs)
+    except JustWatchHttpError as exc:
+        _ADAPTIVE_LIMITER.report(blocked=_looks_like_block(exc))
+        raise
+    except Exception:
+        _ADAPTIVE_LIMITER.report(blocked=False)
+        raise
+    else:
+        _ADAPTIVE_LIMITER.report(blocked=False)
+        return result
+    finally:
+        _ADAPTIVE_LIMITER.release()
 
 # Single-flight: birden fazla kullanici ayni anda ayni (baslik, yil, ulke, dil)
 # icin arama tetiklerse (ayri sync_cache cagrilari - farkli yukleme isleri),
@@ -393,18 +485,16 @@ def _fallback_identify_and_fetch(title: str, target_year: int, country: str, lan
     bir tahmin degil, dogru/onaylanmis bir "bu ulkede mevcut degil" sonucu.
     """
     try:
-        with _JUSTWATCH_SEMAPHORE:
-            fallback_results = search(
-                title, country=FALLBACK_SEARCH_COUNTRY, language=FALLBACK_SEARCH_LANGUAGE, count=SEARCH_COUNT
-            )
+        fallback_results = _call_justwatch(
+            search, title, country=FALLBACK_SEARCH_COUNTRY, language=FALLBACK_SEARCH_LANGUAGE, count=SEARCH_COUNT
+        )
     except Exception:
         return None
     identified = _year_matched_entry(fallback_results, target_year)
     if identified is None:
         return None
     try:
-        with _JUSTWATCH_SEMAPHORE:
-            return details(identified.entry_id, country=country, language=language)
+        return _call_justwatch(details, identified.entry_id, country=country, language=language)
     except Exception:
         return None
 
@@ -421,8 +511,7 @@ def search_movie(title: str, year: str, country: str, language: str) -> tuple[di
     atilmaz.
     """
     try:
-        with _JUSTWATCH_SEMAPHORE:
-            results = search(title, country=country, language=language, count=SEARCH_COUNT)
+        results = _call_justwatch(search, title, country=country, language=language, count=SEARCH_COUNT)
     except Exception as exc:  # network / rate limit / API errors
         return None, f"JustWatch istegi basarisiz: {exc}"
 
@@ -496,8 +585,7 @@ def search_candidates(
     onune eklendigi sonuclar yuzunden gorunmez oluyor.
     """
     try:
-        with _JUSTWATCH_SEMAPHORE:
-            direct_results = search(title, country=country, language=language, count=count)
+        direct_results = _call_justwatch(search, title, country=country, language=language, count=count)
     except Exception as exc:
         return [], f"JustWatch istegi basarisiz: {exc}"
 
@@ -506,10 +594,9 @@ def search_candidates(
 
     if country != FALLBACK_SEARCH_COUNTRY:
         try:
-            with _JUSTWATCH_SEMAPHORE:
-                fallback_results = search(
-                    title, country=FALLBACK_SEARCH_COUNTRY, language=FALLBACK_SEARCH_LANGUAGE, count=count
-                )
+            fallback_results = _call_justwatch(
+                search, title, country=FALLBACK_SEARCH_COUNTRY, language=FALLBACK_SEARCH_LANGUAGE, count=count
+            )
         except Exception:
             fallback_results = []
         for entry in fallback_results:
@@ -517,8 +604,7 @@ def search_candidates(
                 continue
             seen_ids.add(entry.entry_id)
             try:
-                with _JUSTWATCH_SEMAPHORE:
-                    detailed = details(entry.entry_id, country=country, language=language)
+                detailed = _call_justwatch(details, entry.entry_id, country=country, language=language)
             except Exception:
                 continue
             candidates.append(entry_to_candidate(detailed))
@@ -568,12 +654,15 @@ def sync_cache(
 ) -> tuple[dict, list[dict]]:
     """progress: opsiyonel callback(done, total, title) - her yeni/guncellenen film sonrasi cagirilir.
 
-    Aramalar MAX_CONCURRENT_REQUESTS kadar paralel thread'de yapilir (ag
-    gecikmesi darbogaz oldugu icin, CPU degil). Ayni (baslik, yil) icin
-    watchlist'te birden fazla satir varsa tek arama yapilir, sonuc hepsine
-    uygulanir. Cache'e yazma ve hata biriktirme sadece ana thread'de olur,
-    bu yuzden kilit gerekmiyor - sadece ilerleme sayaci paylasildigi icin
-    kilitli.
+    Aramalar en fazla MAX_CONCURRENT_REQUESTS (8) thread'de paralel yapilir
+    (ag gecikmesi darbogaz oldugu icin, CPU degil) - ama gercekte ayni anda
+    JustWatch'a giden istek sayisini _AdaptiveLimiter (AIMD) belirler:
+    INITIAL_CONCURRENT_REQUESTS (4) ile baslar, sorun yoksa yavasca bu
+    havuz boyutuna kadar hizlanir, bir blok isareti gorunce hemen yarisina
+    iner. Ayni (baslik, yil) icin watchlist'te birden fazla satir varsa tek
+    arama yapilir, sonuc hepsine uygulanir. Cache'e yazma ve hata biriktirme
+    sadece ana thread'de olur, bu yuzden kilit gerekmiyor - sadece ilerleme
+    sayaci paylasildigi icin kilitli.
     """
     current_uris = {row["uri"] for row in rows}
     todo_rows = [row for row in rows if needs_lookup(cache, row["uri"], country)]
