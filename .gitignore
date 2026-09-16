@@ -4,6 +4,8 @@ __pycache__/
 # Generated/cache data
 justwatch_cache.json
 justwatch_cache_preset_*.json
+justwatch_popular_index_*.json
+justwatch_cache*.backup-*.json
 manual_overrides.json
 manual_overrides_preset_*.json
 plan.json

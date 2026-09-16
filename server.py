@@ -136,6 +136,7 @@ def run_job(
             progress=progress,
             owned_platforms=owned_platforms,
             overrides=overrides,
+            popular_index_file=storage.make_path(f"justwatch_popular_index_{country}.json"),
         )
         with JOBS_LOCK:
             JOBS[job_id].update(status="done", result=plan)
