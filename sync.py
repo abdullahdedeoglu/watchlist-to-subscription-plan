@@ -81,8 +81,17 @@ def print_report(plan: dict) -> None:
     print()
 
 
-def cli_progress(done: int, total: int, title: str) -> None:
-    print(f"  [{done}/{total}] {title}")
+_PHASE_LABELS = {
+    "index": "JustWatch katalogu taraniyor",
+    "batch": "Toplu on-arama",
+    "search": "Film araniyor",
+}
+
+
+def cli_progress(done: int, total: int, title: str, phase: str = "search") -> None:
+    label = _PHASE_LABELS.get(phase, phase)
+    suffix = f" {title}" if title else ""
+    print(f"  [{label} {done}/{total}]{suffix}")
 
 
 def parse_args() -> argparse.Namespace:
