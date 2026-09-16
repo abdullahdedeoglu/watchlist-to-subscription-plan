@@ -528,6 +528,26 @@ body::before {
   transition: width 0.25s ease;
 }
 
+/* Toplam sayi henuz bilinmeyen (ya da tek bir yuzdeye donusturmenin
+   yanlis/geri-sicramali olacagi - katalog taramasi/toplu on-arama) asamalar
+   icin: bar %100 genislikte ama hareketli seritlerle "canli" gorunur -
+   gercek ilerleme metinde (progress-detail) ayrica gosterilir. */
+.progress-bar-fill.busy {
+  width: 100% !important;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--accent) 0 10px,
+    var(--positive) 10px 20px
+  );
+  background-size: 28px 28px;
+  animation: progress-stripes 0.9s linear infinite;
+}
+
+@keyframes progress-stripes {
+  from { background-position: 0 0; }
+  to { background-position: 28px 0; }
+}
+
 .progress-detail {
   margin-top: 10px;
   font-family: var(--f-mono);

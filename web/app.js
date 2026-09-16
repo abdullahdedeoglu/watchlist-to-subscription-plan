@@ -76,6 +76,8 @@ const I18N = {
     progressTitle: "JustWatch'ta aranıyor…",
     progressLoading: "Yükleniyor...",
     progressCacheCheck: "Cache kontrol ediliyor...",
+    progressPhaseIndex: (done, total) => `JustWatch kataloğu taranıyor (${done}/${total})`,
+    progressPhaseBatch: (done, total) => `Filmler ön aranıyor (${done}/${total})`,
     progressError: "Hata: ",
     fileTypeAlert: "Lütfen bir .csv dosyası seç.",
     randomPoolLabel: "Rastgele film önerisi hangi platformlar arasından seçilsin? (boş bırakırsan tüm watchlist)",
@@ -159,6 +161,8 @@ const I18N = {
     progressTitle: "Searching JustWatch…",
     progressLoading: "Loading...",
     progressCacheCheck: "Checking cache...",
+    progressPhaseIndex: (done, total) => `Scanning JustWatch catalog (${done}/${total})`,
+    progressPhaseBatch: (done, total) => `Pre-searching movies (${done}/${total})`,
     progressError: "Error: ",
     fileTypeAlert: "Please choose a .csv file.",
     randomPoolLabel: "Which platforms should random picks come from? (leave empty for the whole watchlist)",
@@ -816,6 +820,7 @@ async function uploadCsv(csvText, preset = null) {
   footerEl.classList.add("hidden");
   dropzone.classList.add("compact");
   progressPanel.classList.remove("hidden");
+  progressFill.classList.remove("busy");
   progressFill.style.width = "6%";
   progressDetail.textContent = t("progressLoading");
 
@@ -840,16 +845,30 @@ function pollStatus(jobId) {
     const res = await fetch(`/api/status/${jobId}`);
     const job = await res.json();
 
-    if (job.total > 0) {
+    // "search" (asil film-basina arama) asamasinda gercek yuzdeyi biliyoruz.
+    // "index"/"batch" (katalog taramasi / toplu on-arama) asamalarinda da
+    // gercek done/total sayaci var ama bunlari TEK bir surekli yuzdeye
+    // karistirmiyoruz (asamalar arasi geri sicrama kafa karistirir) - onun
+    // yerine barı "busy" (canli/animasyonlu) yapip, gercek sayilari metinde
+    // gosteriyoruz. Boylece kullanici hem "bir sey oluyor" hissini hem de
+    // dogru bilgiyi ayni anda goruyor.
+    if (job.total > 0 && job.phase === "search") {
       const pct = Math.max(6, Math.round((job.done / job.total) * 100));
+      progressFill.classList.remove("busy");
       progressFill.style.width = pct + "%";
       progressDetail.textContent = `[${job.done}/${job.total}] ${job.current}`;
+    } else if (job.total > 0 && (job.phase === "index" || job.phase === "batch")) {
+      progressFill.classList.add("busy");
+      const key = job.phase === "index" ? "progressPhaseIndex" : "progressPhaseBatch";
+      progressDetail.textContent = t(key, job.done, job.total);
     } else if (job.status === "running") {
+      progressFill.classList.add("busy");
       progressDetail.textContent = t("progressCacheCheck");
     }
 
     if (job.status === "done") {
       clearInterval(timer);
+      progressFill.classList.remove("busy");
       progressFill.style.width = "100%";
       setTimeout(() => {
         progressPanel.classList.add("hidden");
@@ -858,6 +877,7 @@ function pollStatus(jobId) {
       }, 200);
     } else if (job.status === "error") {
       clearInterval(timer);
+      progressFill.classList.remove("busy");
       progressDetail.textContent = t("progressError") + job.error;
     }
   }, 400));

@@ -124,9 +124,9 @@ STATIC_FILES = {
 def run_job(
     job_id: str, csv_text: str, country: str, owned_platforms: list, cache_file: Path, overrides: dict
 ) -> None:
-    def progress(done: int, total: int, title: str) -> None:
+    def progress(done: int, total: int, title: str, phase: str = "search") -> None:
         with JOBS_LOCK:
-            JOBS[job_id].update(done=done, total=total, current=title)
+            JOBS[job_id].update(done=done, total=total, current=title, phase=phase)
 
     try:
         plan = core.process(
@@ -333,6 +333,7 @@ class Handler(BaseHTTPRequestHandler):
                     "done": 0,
                     "total": 0,
                     "current": "",
+                    "phase": "search",
                     "result": None,
                     "error": None,
                 }

@@ -128,6 +128,17 @@ POPULAR_MAX_OFFSET = 1999
 # Populer film siralamasi/kataloğu her gun degismez - 1 gunluk TTL, tazelik
 # ile JustWatch'a (ve Redis/disk yazma) ek yuk arasinda makul bir denge.
 POPULAR_INDEX_TTL_SECONDS = 24 * 60 * 60
+# Index insa edilirken sayfalar bu kadarlik gruplar halinde PARALEL cekilir
+# (sirali tek-tek yerine) - "cache kontrol ediliyor" asamasinin, ozellikle
+# index'in gunde bir kez yeniden kurulmasi gerektiginde, kullanicinin
+# ilerleme gormeden uzun sure bekledigi hissi vermesini onlemek icin. Sayfalar
+# yine de GRUP ICINDE SIRAYLA islenir (ilk bos/hatali sayfada durulur, eskisi
+# gibi) - bu yuzden bir grubun sinirina denk gelen kataloglarda en fazla
+# (PAGE_FETCH_CONCURRENCY - 1) kadar GEREKSIZ (ama zararsiz) istek atilabilir;
+# kucuk kataloglu bir ulkede gunde 1 kez olan bu israf, hiz kazanimina karsi
+# kabul edilebilir bir bedel. Istekler yine paylasimli _ADAPTIVE_LIMITER
+# uzerinden gectigi icin (bkz. _call_justwatch) blok korumasi degismiyor.
+PAGE_FETCH_CONCURRENCY = 4
 
 # Faz 4: populer index'te bulunamayan (obskur film/yil uyusmazligi) filmler
 # icin GraphQL "alias batching" - birden fazla arama sorgusunu TEK istekte
@@ -581,7 +592,7 @@ def _normalize_title_key(title: str) -> str:
     return re.sub(r"[^a-z0-9]", "", ascii_only.lower())
 
 
-def build_popular_index(country: str, language: str) -> dict[str, dict[str, dict]]:
+def build_popular_index(country: str, language: str, progress=None) -> dict[str, dict[str, dict]]:
     """JustWatch'in "popular" katalogunu POPULAR_PAGE_SIZE'lik sayfalar halinde
     tarayip {normalize_edilmis_baslik: {yil_str: candidate_dict}} seklinde
     yerel bir index'e cikarir. Sadece filmlerle (object_types=MOVIE)
@@ -592,32 +603,52 @@ def build_popular_index(country: str, language: str) -> dict[str, dict[str, dict
     bile (search()'te gordugumuz fuzzy/alakasiz sonuc riski olmadan) guvenle
     tam yil eslesmesi icin kullanilabilir.
 
-    Bir sayfa cekilirken hata olursa (agi kesintisi vb.) o ana kadar
-    toplananlarla index'i tamamlar - kismi bir index, hic index olmamasindan
-    iyidir (kalan basliklar zaten eski, tek-tek search() yoluna duser).
+    Sayfalar PAGE_FETCH_CONCURRENCY'lik gruplar halinde PARALEL cekilir (bkz.
+    o sabitin yorumu) ama her grup icinde SIRAYLA islenir - ilk bos ya da
+    hatali (agi kesintisi vb.) sayfada durulur, o ana kadar toplananlarla
+    index tamamlanir. Kismi bir index, hic index olmamasindan iyidir (kalan
+    basliklar zaten eski, tek-tek search() yoluna duser).
+
+    progress verilirse her sayfa sonucu islendiginde
+    progress(islenen_sayfa, toplam_sayfa, "", phase="index") ile cagirilir -
+    boylece cagiran (bkz. sync_cache/server.py) bu potansiyel olarak uzun
+    surebilen asamada da kullaniciya gercek bir ilerleme gosterebilir.
     """
     index: dict[str, dict[str, dict]] = {}
-    offset = 0
-    while offset <= POPULAR_MAX_OFFSET:
-        try:
-            page = _call_justwatch(
-                popular,
-                country=country,
-                language=language,
-                count=POPULAR_PAGE_SIZE,
-                offset=offset,
-                object_types="MOVIE",
-            )
-        except Exception:
-            break
-        if not page:
-            break
-        for entry in page:
-            if entry.release_year is None:
-                continue
-            year_bucket = index.setdefault(_normalize_title_key(entry.title), {})
-            year_bucket.setdefault(str(entry.release_year), entry_to_candidate(entry))
-        offset += POPULAR_PAGE_SIZE
+    offsets = list(range(0, POPULAR_MAX_OFFSET + 1, POPULAR_PAGE_SIZE))
+    total_pages = len(offsets)
+    pages_done = 0
+
+    def fetch_page(offset: int):
+        return _call_justwatch(
+            popular, country=country, language=language,
+            count=POPULAR_PAGE_SIZE, offset=offset, object_types="MOVIE",
+        )
+
+    with ThreadPoolExecutor(max_workers=PAGE_FETCH_CONCURRENCY) as executor:
+        for batch_start in range(0, total_pages, PAGE_FETCH_CONCURRENCY):
+            batch_offsets = offsets[batch_start : batch_start + PAGE_FETCH_CONCURRENCY]
+            future_by_offset = {offset: executor.submit(fetch_page, offset) for offset in batch_offsets}
+
+            stop = False
+            for offset in batch_offsets:
+                try:
+                    page = future_by_offset[offset].result()
+                except Exception:
+                    page = None
+                pages_done += 1
+                if progress:
+                    progress(pages_done, total_pages, "", phase="index")
+                if not page:
+                    stop = True
+                    break
+                for entry in page:
+                    if entry.release_year is None:
+                        continue
+                    year_bucket = index.setdefault(_normalize_title_key(entry.title), {})
+                    year_bucket.setdefault(str(entry.release_year), entry_to_candidate(entry))
+            if stop:
+                break
     return index
 
 
@@ -644,7 +675,7 @@ def save_popular_index(index: dict, cache_file: Path) -> None:
     )
 
 
-def ensure_popular_index(country: str, language: str, cache_file: Path) -> dict:
+def ensure_popular_index(country: str, language: str, cache_file: Path, progress=None) -> dict:
     """TTL icinde taze bir populer index varsa onu doner, yoksa JustWatch'tan
     yeniden insa edip kaydeder. Insa etmek ~20 istek suruyor ama sonuc ulke
     basina paylasilir (tum kullanicilar/senkronizasyonlar), bu yuzden
@@ -652,7 +683,7 @@ def ensure_popular_index(country: str, language: str, cache_file: Path) -> dict:
     cached = load_popular_index(cache_file)
     if cached is not None:
         return cached
-    index = build_popular_index(country, language)
+    index = build_popular_index(country, language, progress=progress)
     if index:
         save_popular_index(index, cache_file)
     return index
@@ -994,7 +1025,13 @@ def sync_cache(
     progress=None,
     popular_index_file: Path | None = None,
 ) -> tuple[dict, list[dict]]:
-    """progress: opsiyonel callback(done, total, title) - her yeni/guncellenen film sonrasi cagirilir.
+    """progress: opsiyonel callback(done, total, title, phase). Uc ayri
+    asamada, her biri KENDI done/total sayaciyla cagirilabilir:
+    phase="index" (populer katalog sayfalari - sadece index taze degilse),
+    phase="batch" (Faz 4 on-arama gruplari - sadece bulunamayan sorgu varsa),
+    phase="search" (asil film-basina sonuclar - her zaman). Boylece cagiran
+    (bkz. server.py) uzun surebilen index/batch asamalarinda da kullaniciya
+    "hicbir sey olmuyormus" hissi vermeyen, gercek bir ilerleme gosterebilir.
 
     Aramalar en fazla MAX_CONCURRENT_REQUESTS (8) thread'de paralel yapilir
     (ag gecikmesi darbogaz oldugu icin, CPU degil) - ama gercekte ayni anda
@@ -1030,7 +1067,7 @@ def sync_cache(
         if popular_index_file is None:
             popular_index_file = Path(f"justwatch_popular_index_{country}.json")
         try:
-            popular_index = ensure_popular_index(country, language, popular_index_file)
+            popular_index = ensure_popular_index(country, language, popular_index_file, progress=progress)
         except Exception:
             # Populer index isteğe bagli bir hizlandirma - insa edilemezse
             # (ornek: JustWatch tamamen erisilemez) tum senkronizasyonu
@@ -1044,6 +1081,8 @@ def sync_cache(
     ]
     if needs_live:
         batch_groups = [needs_live[i : i + BATCH_SIZE] for i in range(0, len(needs_live), BATCH_SIZE)]
+        total_batches = len(batch_groups)
+        batches_done = 0
 
         def run_batch(group: list[tuple[str, str]]):
             return _resolve_batch(group, country, language)
@@ -1054,6 +1093,9 @@ def sync_cache(
                 resolved = future.result()
                 if resolved is not None:
                     prefetched.update(resolved)
+                batches_done += 1
+                if progress:
+                    progress(batches_done, total_batches, "", phase="batch")
 
     total = len(queries)
     done_count = 0
@@ -1069,7 +1111,7 @@ def sync_cache(
         with progress_lock:
             done_count += 1
             if progress:
-                progress(done_count, total, key[0])
+                progress(done_count, total, key[0], phase="search")
         return key, result, error
 
     new_entries: dict[str, dict] = {}
