@@ -12,16 +12,45 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from simplejustwatchapi.justwatch import search
+from simplejustwatchapi.justwatch import details, search
 
 CACHE_FILE = Path("justwatch_cache.json")
 DEFAULT_COUNTRY = "TR"
-SEARCH_COUNT = 5
+# DIKKAT: JustWatch'in arama API'si `count` parametresine gore SADECE sonuc
+# sayisini degil, DONDURULEN SONUCLARIN KENDISINI de degistirebiliyor - bu
+# deterministik ama beklenmedik bir davranis. Canli test edildi: bazi
+# sorgularda count=5 ile dogru film sonuclarda HIC YOKKEN, count=6-10
+# arasinda ayni sorgu icin 1. sirada cikiyor (ayni istek 5 kez tekrarlandi,
+# hep ayni sekilde "kayboluyor" - rastgele degil). count=5 (eski deger)
+# otomatik eslestirmede gercek, tespit edilebilir "bulunamadi" hatalarina
+# yol aciyordu. 10, birden fazla sorguda guvenilir calistigi dogrulanan
+# bir deger - kucuk bir sayi secmekten kacinilmali.
+SEARCH_COUNT = 10
+# Hedef ulkenin kendi dilinde arama basarisiz olursa (asagida aciklandigi
+# gibi) filmi guvenilir sekilde tespit etmek icin kullanilan yedek
+# ulke/dil. en/US, JustWatch'in en genis/en iyi indekslenmis katalogu -
+# neredeyse her filmin orijinal/Ingilizce basligiyla dogru sonuc veriyor.
+FALLBACK_SEARCH_COUNTRY = "US"
+FALLBACK_SEARCH_LANGUAGE = "en"
 # Bir cache kaydi kac gun sonra "eski" sayilip yeniden aransin - platform
 # katalogu zamanla degisiyor (bir film Netflix'ten kalkabilir vs.), sonsuza
 # kadar ayni cevabi vermek yanlis bilgi verir. 7 gun, guncellik ile JustWatch'a
 # ek yuk arasinda kullanicinin sectigi denge noktasi.
 CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
+# JustWatch'ta hic sonuc bulunamayan (var olmayan/cok obskur) basliklar icin
+# ayri, daha kisa bir TTL - bunlari da cache'lemezsek her senkronizasyonda
+# ayni "bulunamadi" cevabini almak icin tekrar istek atariz. Pozitif eslesme
+# TTL'inden kisa tutuluyor cunku JustWatch katalogu genisleyebilir (bugun
+# olmayan bir film yarin eklenebilir), pozitif bir eslesmeye gore daha sik
+# yeniden denenmesi mantikli.
+NEGATIVE_CACHE_TTL_SECONDS = 3 * 24 * 60 * 60
+# Tam yil eslesmesi bulunamadiginda, en yakin sonucu kabul etmek icin
+# izin verilen maksimum yil farki. JustWatch bazi ulkelerde/kataloglarda
+# festival ya da yerel vizyon tarihini "release year" olarak gosterebiliyor,
+# bu da gercekte ayni film icin 1 yillik bir kaymaya yol acabiliyor - bunu
+# tolere ediyoruz. Daha buyuk bir fark, JustWatch'in aramaya alakasiz bir
+# sonuc dondurdugunun (baska bir film) isaretidir.
+YEAR_TOLERANCE = 1
 # Ayni anda JustWatch'a atilacak istek sayisi. Ag gecikmesi tek tek istekleri
 # yavaslatiyordu, bu da darbogazdi (CPU degil). Cok yuksek bir deger resmi
 # olmayan API'yi tetikleyip rate-limit/IP engeline yol acabilir; 4 makul bir
@@ -38,6 +67,51 @@ MAX_CONCURRENT_REQUESTS = 4
 # SURECI GENELINDE PAYLASILAN semafor, kac is/kullanici olursa olsun ayni
 # anda en fazla MAX_CONCURRENT_REQUESTS istek gitmesini garanti eder.
 _JUSTWATCH_SEMAPHORE = threading.Semaphore(MAX_CONCURRENT_REQUESTS)
+
+# Single-flight: birden fazla kullanici ayni anda ayni (baslik, yil, ulke, dil)
+# icin arama tetiklerse (ayri sync_cache cagrilari - farkli yukleme isleri),
+# JustWatch'a sadece bir istek gitsin, digerleri o istegin sonucunu beklesin.
+# Semaphore sadece "ayni anda kac istek" sinirini koyar, ayni sorguyu birden
+# fazla kez atmayi engellemez - bu onu engeller.
+
+
+class _InflightSlot:
+    __slots__ = ("event", "result")
+
+    def __init__(self):
+        self.event = threading.Event()
+        self.result = None
+
+
+_INFLIGHT: dict[tuple, "_InflightSlot"] = {}
+_INFLIGHT_GUARD = threading.Lock()
+
+
+def _singleflight_search_movie(
+    title: str, year: str, country: str, language: str
+) -> tuple[dict | None, str | None]:
+    key = (title, year, country, language)
+    with _INFLIGHT_GUARD:
+        slot = _INFLIGHT.get(key)
+        if slot is None:
+            slot = _InflightSlot()
+            _INFLIGHT[key] = slot
+            is_leader = True
+        else:
+            is_leader = False
+
+    if not is_leader:
+        slot.event.wait()
+        return slot.result
+
+    try:
+        slot.result = search_movie(title, year, country, language)
+    finally:
+        with _INFLIGHT_GUARD:
+            del _INFLIGHT[key]
+        slot.event.set()
+    return slot.result
+
 
 # Desteklenen ulkeler: kod -> {goruntulenen isim (tr/en), JustWatch dil kodu}.
 # Ulke isimleri arayuz dili tr/en icin ayri ayri tutulur; yeni bir arayuz dili
@@ -253,7 +327,8 @@ def needs_lookup(cache: dict, uri: str, country: str) -> bool:
     checked_at = data.get("checked_at")
     if checked_at is None:
         return True  # bu ozellik eklenmeden once aranmis eski kayit
-    return (time.time() - checked_at) > CACHE_TTL_SECONDS
+    ttl = CACHE_TTL_SECONDS if data.get("matched") else NEGATIVE_CACHE_TTL_SECONDS
+    return (time.time() - checked_at) > ttl
 
 
 def _target_year(year: str) -> int | None:
@@ -263,30 +338,132 @@ def _target_year(year: str) -> int | None:
         return None
 
 
+def _exact_year_entry(results: list, target_year: int):
+    for entry in results:
+        if entry.release_year == target_year:
+            return entry
+    return None
+
+
+def _year_matched_entry(results: list, target_year: int):
+    """results icinde target_year ile tam eslesen bir kayit varsa onu, yoksa
+    (YEAR_TOLERANCE icinde kalan) en yakin yillisini, o da yoksa None doner.
+
+    SADECE guvenilir/iyi indekslenmis bir katalogda (FALLBACK_SEARCH_COUNTRY,
+    yani en/US) kullanilmali - bkz. search_movie. Hedef ulkenin kendi
+    dilindeki aramada (TR gibi) bu tolerans TEHLIKELI: JustWatch'in fuzzy
+    aramasi o kadar gevsek olabiliyor ki tamamen alakasiz bir film, sadece
+    yil olarak 1 yakin oldugu icin kabul edilebiliyor (canli test edildi:
+    'Loving Vincent' (2017) TR aramasinda, alakasiz bir film olan 'Sevmek'
+    (2016) ile 1 yil farkla "yakin" sayilip yanlislikla eslesiyordu). Bu
+    yuzden hedef ulke aramasinda SADECE _exact_year_entry kullanilir; tam
+    eslesme yoksa dogrudan US/en fallback'e devredilir - tolerans SADECE
+    orada, guvenilir katalogda uygulanir.
+
+    Baslik metni burada kullanilmiyor: JustWatch sonucu hedef ulkenin dilinde
+    dondurur (ceviri), bu yuzden metin benzerligi guvenilir bir sinyal degil -
+    "Ice Age" vs "Buz Devri" gibi DOGRU bir eslesme bile dusuk metin
+    benzerligi verebilir. Yil, ceviriden bagimsiz ve bir filmin gercekten
+    ayni film olup olmadigini gosteren cok daha guvenilir bir isaret.
+    """
+    exact = _exact_year_entry(results, target_year)
+    if exact is not None:
+        return exact
+    candidates_with_year = [e for e in results if e.release_year is not None]
+    if not candidates_with_year:
+        return None
+    closest = min(candidates_with_year, key=lambda e: abs(e.release_year - target_year))
+    if abs(closest.release_year - target_year) <= YEAR_TOLERANCE:
+        return closest
+    return None
+
+
+def _fallback_identify_and_fetch(title: str, target_year: int, country: str, language: str):
+    """Hedef ulkenin kendi dilinde guvenilir bir eslesme bulunamadiginda
+    (bkz. search_movie) cagrilir.
+
+    JustWatch, aranan film o ulkede/kataloğunda hic mevcut olmadiginda bos
+    sonuc donmek yerine alakasiz baslikler donduruyor (canli test edildi:
+    'Das Boot' TR aramasinda anime/dizi sonuclari veriyor, ama US/en
+    aramasinda ilk sirada birebir dogru cikiyor). Bu yuzden filmi once
+    en genis/en iyi indekslenmis katalog olan en/US uzerinden guvenilir
+    sekilde TESPIT ediyoruz, sonra o ID ile hedef ulkedeki GERCEK
+    tekliflerini details() ile ayrica soruyoruz. Film gercekten hedef
+    ulkede yoksa bu da bos bir teklif listesiyle doner - bu artik yanlis
+    bir tahmin degil, dogru/onaylanmis bir "bu ulkede mevcut degil" sonucu.
+    """
+    try:
+        with _JUSTWATCH_SEMAPHORE:
+            fallback_results = search(
+                title, country=FALLBACK_SEARCH_COUNTRY, language=FALLBACK_SEARCH_LANGUAGE, count=SEARCH_COUNT
+            )
+    except Exception:
+        return None
+    identified = _year_matched_entry(fallback_results, target_year)
+    if identified is None:
+        return None
+    try:
+        with _JUSTWATCH_SEMAPHORE:
+            return details(identified.entry_id, country=country, language=language)
+    except Exception:
+        return None
+
+
 def search_movie(title: str, year: str, country: str, language: str) -> tuple[dict | None, str | None]:
-    """Returns (by_country_entry_dict, error_message)."""
+    """Returns (by_country_entry_dict, error_message).
+
+    Ag/istek hatalarinda (None, hata_mesaji) doner - bu cache'lenmez, bir
+    sonraki senkronizasyonda tekrar denenir (gecici olabilir). JustWatch'ta
+    hic guvenilir sonuc bulunamadiginda ise (None, hata) DEGIL, matched=False
+    bir sozluk donuyoruz - bu, aramanin basarili ama negatif oldugunu
+    isaretler ve cagiran tarafindan (sync_cache) NEGATIVE_CACHE_TTL_SECONDS
+    ile cache'lenir, boylece ayni "yok" cevabi icin tekrar tekrar istek
+    atilmaz.
+    """
     try:
         with _JUSTWATCH_SEMAPHORE:
             results = search(title, country=country, language=language, count=SEARCH_COUNT)
     except Exception as exc:  # network / rate limit / API errors
         return None, f"JustWatch istegi basarisiz: {exc}"
 
-    if not results:
-        return None, "JustWatch'ta sonuc bulunamadi"
-
     target_year = _target_year(year)
 
-    chosen = None
-    if target_year is not None:
-        for entry in results:
-            if entry.release_year == target_year:
-                chosen = entry
-                break
-    if chosen is None:
-        chosen = results[0]
+    if target_year is None:
+        # CSV'de yil yoksa elimizde guvenilir bir filtre yok - eskisi gibi
+        # ilk sonuca dusuyoruz, ama kontrol onerilir olarak isaretliyoruz.
+        chosen = results[0] if results else None
+    elif country == FALLBACK_SEARCH_COUNTRY:
+        # Zaten en guvenilir/iyi indekslenmis katalogda ariyoruz (en/US) -
+        # yakin yil toleransi burada guvenli, ayrica bir fallback'e gerek yok.
+        chosen = _year_matched_entry(results, target_year) if results else None
+    else:
+        # Hedef ulkenin (TR gibi) kendi dilindeki aramasi bazen alakasiz/fuzzy
+        # sonuclar donduruyor, bu yuzden SADECE tam yil eslesmesine
+        # guveniyoruz (bkz. _year_matched_entry'nin docstring'i). Tam eslesme
+        # yoksa, yakin-ama-tam-degil bir TR sonucunu riske atmak yerine daha
+        # guvenilir olan US/en fallback'e devrediyoruz.
+        chosen = _exact_year_entry(results, target_year) if results else None
+        if chosen is None:
+            chosen = _fallback_identify_and_fetch(title, target_year, country, language)
 
-    # Yil eslesmediyse (ya da CSV'de yil yoksa) bu, ilk sonuca dusuldugu
-    # anlamina gelir - remake/ayni isimli baska film riski var, kontrol onerilir.
+    if chosen is None:
+        # Ne dogrudan ne de (varsa) yedek arama guvenilir bir sonuc verdi -
+        # JustWatch'in dondurdugu sonuclarin aranan filmle alakasiz oldugu
+        # anlamina gelir (ornek: "On the Silver Globe" (1988) aramasinin
+        # "Doctor on the Edge" (2026) ile eslesmesi). Yanlis ama "eslesti"
+        # gibi gorunen bir sonucu sessizce cache'lemek yerine "bulunamadi"
+        # sayiyoruz - bu, negatif cache'e duser ve kullaniciya manuel
+        # eslestirme secenegi olarak gosterilir.
+        return {
+            "matched": False,
+            "needs_review": False,
+            "manually_confirmed": False,
+            "checked_at": time.time(),
+        }, None
+
+    # Yil eslesmediyse (ya da CSV'de yil yoksa) bu, tam eslesmeye
+    # dusulmedigi anlamina gelir - remake/ayni isimli baska film riski var,
+    # kontrol onerilir.
     needs_review = target_year is None or chosen.release_year != target_year
 
     candidate = entry_to_candidate(chosen)
@@ -296,16 +473,70 @@ def search_movie(title: str, year: str, country: str, language: str) -> tuple[di
     return candidate, None
 
 
-def search_candidates(title: str, country: str, language: str, count: int = 8) -> tuple[list[dict], str | None]:
-    """Rematch/duzeltme arayuzu icin butun aday sonuclari dondurur (otomatik secim yapmaz)."""
+def search_candidates(
+    title: str, country: str, language: str, count: int = 8, target_year: str | None = None
+) -> tuple[list[dict], str | None]:
+    """Rematch/duzeltme arayuzu icin butun aday sonuclari dondurur (otomatik secim yapmaz).
+
+    search_movie() gibi bu da hedef ulkenin (TR gibi) dogrudan aramasinin
+    alakasiz sonuclar dondurebilecegi durumlar icin US/en katalogundan da
+    aday topluyor - aksi halde kullanici manuel duzeltme yapmak istedigi
+    bir filmi (ornek: 'Mad God') bizim arama kutumuzda hic bulamiyor, ustelik
+    otomatik eslestirme onu zaten dogru bulmus olsa bile (bkz. search_movie).
+    Bu fonksiyon TEK bir baslik icin, kullanicinin kendi istegiyle
+    tetiklenen bir arama oldugu icin (toplu is degil), ekstra istek maliyeti
+    kabul edilebilir.
+
+    target_year verilirse (rematch akisinda watchlist'teki filmin yili hep
+    biliniyor), liste yila yakinliga gore siralanir - aksi halde TR sonuclari
+    hep once, US fallback sonuclari hep sonra geliyor, bu da TR'nin alakasiz
+    dondugu durumlarda (bkz. 'On the Silver Globe') dogru cevabi listenin
+    ortasina/sonuna gomup kullanicinin "sistem bunu bulamiyor" sanmasina yol
+    aciyor - oysa dogru cevap genelde US/en'de 1. sirada, sadece TR'nin
+    onune eklendigi sonuclar yuzunden gorunmez oluyor.
+    """
     try:
         with _JUSTWATCH_SEMAPHORE:
-            results = search(title, country=country, language=language, count=count)
+            direct_results = search(title, country=country, language=language, count=count)
     except Exception as exc:
         return [], f"JustWatch istegi basarisiz: {exc}"
-    if not results:
+
+    candidates = [entry_to_candidate(entry) for entry in direct_results]
+    seen_ids = {entry.entry_id for entry in direct_results}
+
+    if country != FALLBACK_SEARCH_COUNTRY:
+        try:
+            with _JUSTWATCH_SEMAPHORE:
+                fallback_results = search(
+                    title, country=FALLBACK_SEARCH_COUNTRY, language=FALLBACK_SEARCH_LANGUAGE, count=count
+                )
+        except Exception:
+            fallback_results = []
+        for entry in fallback_results:
+            if entry.entry_id in seen_ids:
+                continue
+            seen_ids.add(entry.entry_id)
+            try:
+                with _JUSTWATCH_SEMAPHORE:
+                    detailed = details(entry.entry_id, country=country, language=language)
+            except Exception:
+                continue
+            candidates.append(entry_to_candidate(detailed))
+
+    if not candidates:
         return [], "JustWatch'ta sonuc bulunamadi"
-    return [entry_to_candidate(entry) for entry in results], None
+
+    year_int = _target_year(target_year) if target_year else None
+    if year_int is not None:
+        def year_distance(candidate: dict) -> int:
+            matched_year = candidate.get("matched_year")
+            if matched_year is None:
+                return 9999
+            return abs(matched_year - year_int)
+
+        candidates.sort(key=year_distance)
+
+    return candidates, None
 
 
 def confirm_match(cache: dict, uri: str, csv_title: str, csv_year: str, country: str, candidate: dict, cache_file: Path = CACHE_FILE) -> dict:
@@ -358,7 +589,7 @@ def sync_cache(
 
     def run_one(key: tuple[str, str]):
         title, year = key
-        result, error = search_movie(title, year, country, language)
+        result, error = _singleflight_search_movie(title, year, country, language)
         nonlocal done_count
         with progress_lock:
             done_count += 1
@@ -381,6 +612,21 @@ def sync_cache(
                     )["by_country"][country] = dict(result)
                 else:
                     errors.append({"title": row["title"], "year": row["year"], "uri": row["uri"], "error": error})
+
+    # Negatif cache'lenmis (bu turda arandi ya da onceki bir turdan kalma,
+    # TTL'i henuz dolmadigi icin bu turda hic aranmayan) satirlari da
+    # "eslestirilemedi" listesine ekle - yoksa kullanici bunlari sadece ilk
+    # bulunamadiginda gorur, sonraki (cache'ten gecen) senkronizasyonlarda
+    # sessizce plandan kaybolurlar.
+    already_errored = {e["uri"] for e in errors}
+    for row in rows:
+        if row["uri"] in already_errored:
+            continue
+        data = cache.get(row["uri"], {}).get("by_country", {}).get(country)
+        if data is not None and data.get("matched") is False:
+            errors.append(
+                {"title": row["title"], "year": row["year"], "uri": row["uri"], "error": "JustWatch'ta sonuc bulunamadi"}
+            )
 
     removed = [
         {"uri": uri, "title": data.get("title"), "year": data.get("year")}
