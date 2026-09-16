@@ -179,6 +179,10 @@ def send_feedback_email(message: str, movie: dict | None) -> None:
         headers={
             "Authorization": f"Bearer {RESEND_API_KEY}",
             "Content-Type": "application/json",
+            # urllib'in varsayilan "Python-urllib/x.y" User-Agent'i Resend'in
+            # onundeki Cloudflare bot korumasina takiliyor (403, "error code:
+            # 1010") - normal bir deger vermek yetiyor.
+            "User-Agent": "WatchPlan/1.0 (+https://watchplan.onrender.com)",
         },
         method="POST",
     )
