@@ -14,14 +14,13 @@ import http.cookies
 import json
 import os
 import re
-import smtplib
 import sys
 import threading
 import time
 import traceback
+import urllib.request
 import uuid
 import webbrowser
-from email.message import EmailMessage
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -113,13 +112,16 @@ def _extract_session_id(cookie_header: str | None) -> str | None:
 JOBS: dict[str, dict] = {}
 JOBS_LOCK = threading.Lock()
 
-# Site icinden geri bildirim formu - Gmail App Password ile SMTP uzerinden
-# watchplan.support@gmail.com adresine mail atar. Ortam degiskenleri
-# tanimli degilse (yerel gelistirme) gercekten SMTP denemez, sadece
-# konsola yazdirir - boylece gercek kimlik bilgisi olmadan da test edilebilir.
+# Site icinden geri bildirim formu - Resend'in HTTP API'siyle
+# watchplan.support@gmail.com adresine mail atar. Once smtplib/Gmail SMTP
+# denendi ama Render'in ucretsiz planinda giden SMTP portlari (25/465/587)
+# tamamen blok - bkz. https://render.com/changelog/free-web-services-will-no-longer-allow-outbound-traffic-to-smtp-ports
+# Resend duz bir HTTPS istegi oldugu icin bu kisitlamaya takilmiyor.
+# RESEND_API_KEY tanimli degilse (yerel gelistirme) gercekten istek atmaz,
+# sadece konsola yazdirir - boylece gercek kimlik bilgisi olmadan da test edilebilir.
 FEEDBACK_TO_EMAIL = "watchplan.support@gmail.com"
-GMAIL_USER = os.environ.get("GMAIL_USER")
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
+FEEDBACK_FROM_EMAIL = "WatchPlan <onboarding@resend.dev>"
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
 
 FEEDBACK_MAX_LENGTH = 3000
 FEEDBACK_RATE_LIMIT = 5
@@ -151,22 +153,31 @@ def send_feedback_email(message: str, movie: dict | None) -> None:
             lines.append(f"Letterboxd URI: {movie.get('uri')}")
     body = "\n".join(lines)
 
-    if not (GMAIL_USER and GMAIL_APP_PASSWORD):
-        print("=== GERI BILDIRIM (SMTP yapilandirilmadi, sadece logluyorum) ===")
+    if not RESEND_API_KEY:
+        print("=== GERI BILDIRIM (RESEND_API_KEY tanimli degil, sadece logluyorum) ===")
         print(body)
-        print("================================================================")
+        print("========================================================================")
         return
 
-    msg = EmailMessage()
-    msg["Subject"] = "WatchPlan Geri Bildirim" + (" (film ile ilgili)" if movie else "")
-    msg["From"] = GMAIL_USER
-    msg["To"] = FEEDBACK_TO_EMAIL
-    msg.set_content(body)
-
-    with smtplib.SMTP("smtp.gmail.com", 587, timeout=10) as smtp:
-        smtp.starttls()
-        smtp.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-        smtp.send_message(msg)
+    payload = json.dumps(
+        {
+            "from": FEEDBACK_FROM_EMAIL,
+            "to": [FEEDBACK_TO_EMAIL],
+            "subject": "WatchPlan Geri Bildirim" + (" (film ile ilgili)" if movie else ""),
+            "text": body,
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        resp.read()
 
 STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
