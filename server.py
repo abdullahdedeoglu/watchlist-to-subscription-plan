@@ -261,6 +261,20 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def do_HEAD(self):
+        # UptimeRobot vb. uptime izleyiciler varsayilan olarak HEAD istegi
+        # gonderiyor - http.server bunu tanimadigi metod sayip 501 Not
+        # Implemented dondururdu (izleyicide "down" gibi gorunuyordu).
+        try:
+            self._ensure_session()
+            self.send_response(200)
+            self._set_cookie_header()
+            self.end_headers()
+        except Exception:
+            traceback.print_exc()
+            self.send_response(500)
+            self.end_headers()
+
     def do_GET(self):
         try:
             self._handle_get()
