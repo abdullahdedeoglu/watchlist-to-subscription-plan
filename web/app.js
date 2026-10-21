@@ -57,7 +57,6 @@ const I18N = {
     pageTitle: "WatchPlan",
     brandName: "WatchPlan",
     feedbackLink: "Geri bildirim",
-    bmcLink: "☕ Kahve ısmarla",
     feedbackModalTitle: "Geri bildirim",
     feedbackMovieLabel: "Hangi film hakkında? (opsiyonel)",
     feedbackMoviePlaceholder: "Listende ara...",
@@ -152,7 +151,6 @@ const I18N = {
     pageTitle: "WatchPlan",
     brandName: "WatchPlan",
     feedbackLink: "Feedback",
-    bmcLink: "☕ Buy me a coffee",
     feedbackModalTitle: "Feedback",
     feedbackMovieLabel: "Which movie is this about? (optional)",
     feedbackMoviePlaceholder: "Search your list...",
@@ -723,7 +721,7 @@ function sidebarRow(entry, plan) {
     nowhere: plan.not_available_anywhere.length,
   }[entry.type];
   const el = document.createElement("div");
-  el.className = "side-link";
+  el.className = `side-link side-link--${entry.type}`;
   el.innerHTML = `<span>${label}</span><b>${count}</b>`;
   return el;
 }
@@ -1613,8 +1611,7 @@ function movieCard(movie, platformName, excludePlatforms) {
 
   if (movie.needs_review && movie.matched_title) {
     const reviewNote = document.createElement("div");
-    reviewNote.className = "movie-also-on";
-    reviewNote.style.color = "#ffc857";
+    reviewNote.className = "movie-also-on movie-review-note";
     reviewNote.textContent = t("justwatchMatchNote", movie);
     a.appendChild(reviewNote);
   }
@@ -1696,8 +1693,7 @@ function rentBuyCard(movie) {
 
   if (movie.needs_review && movie.matched_title) {
     const reviewNote = document.createElement("div");
-    reviewNote.className = "movie-also-on";
-    reviewNote.style.color = "#ffc857";
+    reviewNote.className = "movie-also-on movie-review-note";
     reviewNote.textContent = t("justwatchMatchNote", movie);
     card.appendChild(reviewNote);
   }
@@ -1762,22 +1758,28 @@ function renderResults(plan) {
 
   const addFilmBtn = document.createElement("button");
   addFilmBtn.type = "button";
-  addFilmBtn.className = "random-trigger-btn";
+  addFilmBtn.className = "random-trigger-btn random-trigger-btn--add";
   addFilmBtn.title = t("addFilmTriggerTitle");
-  addFilmBtn.textContent = "➕";
+  addFilmBtn.setAttribute("aria-label", t("addFilmTriggerTitle"));
   addFilmBtn.addEventListener("click", openAddFilmModal);
   headerBtns.appendChild(addFilmBtn);
 
   const randomBtn = document.createElement("button");
   randomBtn.type = "button";
-  randomBtn.className = "random-trigger-btn";
+  randomBtn.className = "random-trigger-btn random-trigger-btn--dice";
   randomBtn.title = t("randomTriggerTitle");
-  randomBtn.textContent = "🎲";
+  randomBtn.setAttribute("aria-label", t("randomTriggerTitle"));
   randomBtn.addEventListener("click", showRandomPick);
   headerBtns.appendChild(randomBtn);
 
   sideHeader.appendChild(headerBtns);
   controlSideEl.appendChild(sideHeader);
+
+  // Biletler ayri bir kapta - mobilde bu kap yatay kaydirilan serit oluyor,
+  // baslik ve +/zar butonlari ise ustunde sabit kaliyor.
+  const sideList = document.createElement("div");
+  sideList.className = "control-side-list";
+  controlSideEl.appendChild(sideList);
 
   let sawCategory = false;
   let dividerPlaced = false;
@@ -1787,7 +1789,7 @@ function renderResults(plan) {
     } else if (sawCategory && !dividerPlaced) {
       const divider = document.createElement("div");
       divider.className = "side-divider";
-      controlSideEl.appendChild(divider);
+      sideList.appendChild(divider);
       dividerPlaced = true;
     }
 
@@ -1797,7 +1799,7 @@ function renderResults(plan) {
       activePanelKey = entry.key;
       renderResults(plan);
     });
-    controlSideEl.appendChild(row);
+    sideList.appendChild(row);
   }
 
   const activeEntry = entries.find((e) => e.key === activePanelKey);

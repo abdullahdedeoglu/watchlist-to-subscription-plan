@@ -4,9 +4,12 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title id="page-title" data-i18n="pageTitle">Watchlist Planı</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%AC%3C/text%3E%3C/svg%3E" />
+<meta name="description" content="Letterboxd watchlist'ini yükle, hangi sırada hangi platforma abone olursan listeni en hızlı bitireceğini gör." />
+<meta name="theme-color" content="#121210" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500;1,9..144,600&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..900;1,9..144,400..900&family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
 <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
@@ -16,13 +19,20 @@
   <header class="top">
     <div class="top-bar">
       <div class="brand">
-        <span class="brand-mark" aria-hidden="true">&#127916;</span>
-        <span class="brand-name" data-i18n="brandName">WatchPlan</span>
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M3 4h26v6.2a5.8 5.8 0 0 0 0 11.6V28H3v-6.2a5.8 5.8 0 0 0 0-11.6z"/><path fill="none" stroke="var(--bg)" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M10.5 16.2l3.9 3.9 7.4-8"/></svg>
+        <span class="brand-name">Watch<span class="brand-name-accent">Plan</span></span>
       </div>
-      <!-- TODO: Shopier bagis linki gelince asagidaki href'i guncelle -->
       <nav class="top-links">
         <button id="feedback-open" class="top-link" type="button" data-i18n="feedbackLink">Geri bildirim</button>
-        <a class="top-link top-link--coffee" href="https://www.buymeacoffee.com/watchplan" target="_blank" rel="noopener noreferrer" data-i18n="bmcLink">&#9749; Kahve ısmarla</a>
+        <div class="country-row">
+          <label for="lang-select" class="visually-hidden" data-i18n="langLabel">Dil</label>
+          <select id="lang-select">
+            <option value="tr">Türkçe</option>
+            <option value="en">English</option>
+          </select>
+          <label for="country-select" class="visually-hidden" data-i18n="countryLabel">Ülke</label>
+          <select id="country-select"></select>
+        </div>
       </nav>
     </div>
     <p class="subtitle" data-i18n="subtitle">Letterboxd watchlist CSV'ni sürükle, hangi sırada hangi platforma abone olman gerektiğini gör.</p>
@@ -59,29 +69,21 @@
     <button id="dev-clear-cache-btn" class="dev-clear-btn" type="button" data-i18n="devClearBtn">Cache'i temizle</button>
   </div>
 
-  <div class="country-row">
-    <label for="lang-select" data-i18n="langLabel">Dil</label>
-    <select id="lang-select">
-      <option value="tr">Türkçe</option>
-      <option value="en">English</option>
-    </select>
-    <label for="country-select" data-i18n="countryLabel">Ülke</label>
-    <select id="country-select"></select>
-  </div>
+  <div class="upload-bar">
+    <section id="dropzone" class="dropzone">
+      <input type="file" id="file-input" accept=".csv" hidden />
+      <div class="dropzone-inner">
+        <div class="dropzone-icon" aria-hidden="true"></div>
+        <div class="dropzone-text" data-i18n="dropzoneText">CSV dosyasını buraya sürükle</div>
+        <div class="dropzone-sub" data-i18n="dropzoneSub">ya da tıkla ve seç</div>
+      </div>
+    </section>
 
-  <section id="dropzone" class="dropzone">
-    <input type="file" id="file-input" accept=".csv" hidden />
-    <div class="dropzone-inner">
-      <div class="dropzone-icon">&#127916;</div>
-      <div class="dropzone-text" data-i18n="dropzoneText">CSV dosyasını buraya sürükle</div>
-      <div class="dropzone-sub" data-i18n="dropzoneSub">ya da tıkla ve seç</div>
+    <div id="csv-actions" class="csv-actions">
+      <button type="button" class="csv-action-btn" data-preset="/presets/letterboxd-top-500.csv" data-preset-id="letterboxd-top-500" data-count="500" data-i18n="presetLetterboxd">Letterboxd Top 500 yükle</button>
+      <button type="button" class="csv-action-btn" data-preset="/presets/imdb-top-250.csv" data-preset-id="imdb-top-250" data-count="250" data-i18n="presetImdb">IMDb Top 250 yükle</button>
+      <button type="button" id="clear-watchlist-btn" class="csv-action-btn csv-action-btn--clear" data-i18n="clearWatchlistBtn">Listeyi kaldır</button>
     </div>
-  </section>
-
-  <div id="csv-actions" class="csv-actions">
-    <button type="button" class="csv-action-btn" data-preset="/presets/letterboxd-top-500.csv" data-preset-id="letterboxd-top-500" data-count="500" data-i18n="presetLetterboxd">Letterboxd Top 500 yükle</button>
-    <button type="button" class="csv-action-btn" data-preset="/presets/imdb-top-250.csv" data-preset-id="imdb-top-250" data-count="250" data-i18n="presetImdb">IMDb Top 250 yükle</button>
-    <button type="button" id="clear-watchlist-btn" class="csv-action-btn csv-action-btn--clear" data-i18n="clearWatchlistBtn">Listeyi kaldır</button>
   </div>
 
   <section id="progress" class="progress-panel hidden">
