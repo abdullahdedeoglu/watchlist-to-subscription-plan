@@ -201,6 +201,8 @@ STATIC_FILES = {
     "/app.js": ("app.js", "application/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
     "/robots.txt": ("robots.txt", "text/plain; charset=utf-8"),
+    # Google Search Console sahiplik dogrulamasi - silinirse dogrulama duser
+    "/google8fb3670c7bdfd470.html": ("google8fb3670c7bdfd470.html", "text/html; charset=utf-8"),
     "/sitemap.xml": ("sitemap.xml", "application/xml; charset=utf-8"),
     "/site.webmanifest": ("site.webmanifest", "application/manifest+json; charset=utf-8"),
     "/favicon.ico": ("favicon.ico", "image/x-icon"),
