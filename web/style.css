@@ -1560,27 +1560,30 @@ button.top-link {
   background: var(--border-soft) !important;
 }
 
-/* kategori panelleri: 36/42 baslik (kirala/satin al 32/38), 16/22 alt
-   baslik, altinda ince cizgi; ilk poster 20px sonra */
+/* kategori panelleri: basliklar cizimdeki orana gore (A/B/C cizimleri
+   panelin 1.3x buyutulmus hali; olculer ona gore kucultuldu) */
 .panel > .platform-header .platform-name.cat-positive,
 .panel > .platform-header .platform-name.cat-warn,
 .panel > .platform-header .platform-name.cat-dim {
-  font-size: 36px;
-  line-height: 42px;
-  font-weight: 800;
-  letter-spacing: -0.7px;
+  font-size: 62px;
+  line-height: 68px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
 }
 
-.panel > .platform-header .platform-name.cat-warn {
-  font-size: 32px;
-  line-height: 38px;
-}
+.panel > .platform-header .platform-name.cat-warn { font-size: 52px; line-height: 58px; }
+.panel > .platform-header .platform-name.cat-dim { font-size: 68px; line-height: 74px; }
 
 .panel > .control-main-sub {
-  padding-bottom: 12px;
+  font-size: 20px;
+  line-height: 25px;
+  margin-top: 2px;
+  padding-bottom: 10px;
   margin-bottom: 20px;
   border-bottom: 1px solid rgba(218, 181, 109, 0.65);
 }
+
+.panel:has(.cat-dim) > .control-main-sub { font-size: 22px; line-height: 28px; margin-bottom: 26px; }
 
 .panel:has(.cat-positive) > .control-main-sub { border-color: rgba(121, 183, 168, 0.65); }
 
@@ -1790,29 +1793,29 @@ button.top-link {
 .rentbuy-prices {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-top: 6px;
+  gap: 5px;
+  margin-top: 5px;
 }
 
 .rentbuy-chip {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-height: 48px;
-  padding: 6px 12px;
-  border-radius: 8px;
+  min-height: 37px;
+  padding: 4px 9px;
+  border-radius: 6px;
   border: 1px solid var(--border-strong);
   background: var(--bg-elevated);
   color: var(--text);
   text-decoration: none;
   font-family: var(--f-body);
-  font-size: 13px;
-  line-height: 18px;
+  font-size: 11.5px;
+  line-height: 14px;
 }
 
 .rentbuy-provider {
   font-weight: 500;
-  line-height: 17px;
+  line-height: 14px;
 }
 
 .rentbuy-chip:hover {
@@ -1825,17 +1828,17 @@ button.top-link {
 .nowhere-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 8px 11px;
 }
 
 .nowhere-chip {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  min-height: 38px;
-  padding: 0 12px;
+  gap: 11px;
+  min-height: 40px;
+  padding: 0 14px;
   font-family: var(--f-body);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 20px;
   font-weight: 600;
   color: var(--text);
@@ -1846,7 +1849,7 @@ button.top-link {
 
 .nowhere-chip .yr {
   font-family: var(--f-body);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 18px;
   font-weight: 400;
   color: var(--text-dim);
