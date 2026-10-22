@@ -5,6 +5,7 @@ const countrySelect = document.getElementById("country-select");
 const progressPanel = document.getElementById("progress");
 const progressFill = document.getElementById("progress-bar-fill");
 const progressDetail = document.getElementById("progress-detail");
+const progressPercent = document.getElementById("progress-percent");
 const summaryEl = document.getElementById("summary");
 const resultsEl = document.getElementById("results");
 const controlSideEl = document.getElementById("control-side");
@@ -56,9 +57,8 @@ const I18N = {
   tr: {
     pageTitle: "WatchPlan",
     brandName: "WatchPlan",
-    feedbackLink: "Geri bildirim",
-    bmcLink: "☕ Kahve ısmarla",
-    feedbackModalTitle: "Geri bildirim",
+    feedbackLink: "Geri Bildirim",
+    feedbackModalTitle: "Geri Bildirim",
     feedbackMovieLabel: "Hangi film hakkında? (opsiyonel)",
     feedbackMoviePlaceholder: "Listende ara...",
     feedbackMessageLabel: "Mesajın",
@@ -69,81 +69,80 @@ const I18N = {
     feedbackEmptyError: "Bir mesaj yazmalısın.",
     feedbackSendError: "Gönderilemedi, lütfen biraz sonra tekrar dene.",
     subtitle: "Letterboxd watchlist CSV'ni sürükle, hangi sırada hangi platforma abone olman gerektiğini gör.",
-    howtoSummary: "Nasıl kullanılır?",
-    howtoStep1: "Letterboxd'da <strong>Profil → Watchlist → Export watchlist</strong> yoluna git — bir <code>.csv</code> dosyası doğrudan iner (zip yok).",
+    howtoSummary: "Nasıl Kullanılır?",
+    howtoStep1: "Letterboxd'da <strong>Profil → Watchlist → Export watchlist</strong> yoluna git, bir <code>.csv</code> dosyası doğrudan iner.",
     howtoStep2: "1. adımı video olarak izle (56 sn)",
     howtoVideoPlayLabel: "Videoyu oynat",
-    howtoStep3: "O CSV dosyasını aşağıdaki alana sürükle-bırak (ya da alana tıkla ve dosyayı seç).",
-    howtoStep4: "Üst taraftan ülkeni seç — varsayılan Türkiye. JustWatch'ta o ülkedeki abonelik seçenekleri aranır, biraz sürebilir.",
-    howtoStep5: "Arama bitince, hangi sırayla hangi platforma abone olursan watchlist'ini en hızlı bitireceğini görürsün.",
-    howtoStep6: "Poster'in sağ üstündeki <strong>&check;</strong> izledim işaretler, sol üstteki sarı <strong>&#9888;</strong> ise eşleşmeyi kontrol etmeni önerir.",
-    howtoNote: "Watchlist'in bir kere yüklendikten sonra hatırlanır, sayfayı tekrar açtığında otomatik gelir. Güncellemek için yeni CSV'yi tekrar sürükleyip bırakman yeterli.",
-    devModeLabel: "Geliştirici modu",
-    devClearBtn: "Cache'i temizle",
+    howtoStep3: "O CSV dosyasını aşağıdaki alana sürükle-bırak (ya da tıkla ve seç).",
+    howtoStep4: "Üst taraftan ülkeni seç (varsayılan Türkiye).",
+    howtoStep5: "Arama bitince hangi sırayla hangi platforma abone olacağını görürsün.",
+    howtoStep6: "Poster'in sağ üstündeki <strong class=\"ic-ok\">&check;</strong> izledim işaretler, sol üstteki <strong class=\"ic-warn\">&#9888;</strong> eşleşmeyi kontrol etmeni önerir.",
+    devModeLabel: "Geliştirici Modu",
+    devClearBtn: "Cache'i Temizle",
     devClearBtnWorking: "Temizleniyor...",
     devClearConfirm: "JustWatch eşleştirme cache'i tamamen silinsin mi? Bir sonraki aramada tüm filmler sıfırdan aranacak.",
     countryLabel: "Ülke",
     langLabel: "Dil",
-    dropzoneText: "CSV dosyasını buraya sürükle",
+    dropzoneText: "CSV Dosyasını Buraya Sürükle",
     dropzoneSub: "Ya da tıkla ve seç",
-    presetImdb: "IMDb Top 250 yükle",
-    presetLetterboxd: "Letterboxd Top 500 yükle",
+    presetImdb: "IMDb Top 250 Yükle",
+    presetLetterboxd: "Letterboxd Top 500 Yükle",
     presetLoading: "Yükleniyor...",
     presetConfirm: (count) =>
       `Bu, JustWatch'ta ${count} film için tek seferlik büyük bir arama başlatacak. Zaten denediysen art arda tekrar tetiklemekten kaçın - JustWatch'un API'sini geçici olarak bloklayabilir. Devam edilsin mi?`,
-    clearWatchlistBtn: "Listeyi kaldır",
+    clearWatchlistBtn: "Listeyi Kaldır",
     clearWatchlistBtnWorking: "Kaldırılıyor...",
-    progressTitle: "JustWatch'ta aranıyor…",
+    progressTitle: "JustWatch'ta Aranıyor…",
     progressLoading: "Yükleniyor...",
     progressCacheCheck: "Cache kontrol ediliyor...",
     progressPhaseIndex: (done, total) => `JustWatch kataloğu taranıyor (${done}/${total})`,
     progressPhaseBatch: (done, total) => `Filmler ön aranıyor (${done}/${total})`,
     progressError: "Hata: ",
     fileTypeAlert: "Lütfen bir .csv dosyası seç.",
-    randomPoolLabel: "Rastgele film önerisi hangi platformlar arasından seçilsin? (boş bırakırsan tüm watchlist)",
-    randomPickBtn: "🎲 Rastgele film seç",
-    randomTriggerTitle: "Rastgele film seç",
+    randomPoolLabel: "Rastgele film önerisi hangi platformlar arasından seçilsin?\n(boş bırakırsan tüm watchlist)",
+    randomPickBtn: "🎲 Rastgele Film Seç",
+    randomTriggerTitle: "Rastgele Film Seç",
     randomEmptyPool: "Bu havuzda seçilebilecek film kalmadı - başka platform seç ya da izlenenleri geri al.",
     randomNoOffers: "Bu film hiçbir platformda abonelikle bulunamadı.",
-    randomRerollBtn: "🎲 Başka film",
-    markWatchedBtn: "İzledim işaretle",
-    rematchTitlePrefix: "Eşleşmeyi kontrol et",
+    randomRerollBtn: "Başka Film",
+    markWatchedBtn: "İzledim İşaretle",
+    rematchTitlePrefix: "Eşleşmeyi Kontrol Et",
     rematchSubtitle: (m) => `${m.title} (${m.year}) için JustWatch sonuçları`,
     rematchSearching: "Aranıyor...",
     rematchNoResults: "Sonuç bulunamadı. Farklı bir isimle tekrar dene.",
     rematchSaving: "Kaydediliyor...",
     rematchSearchPlaceholder: "Farklı bir isimle JustWatch'ta ara...",
     rematchSearchBtn: "Ara",
-    randomModalTitle: "Rastgele Film",
+    randomModalTitle: 'Rastgele <span class="accent">Film</span>',
     sidebarTitle: "Abonelik Sırası",
-    ownedBadge: "Sahipsin",
+    ownedBadge: "Sahibim",
     ownedCheckTitle: "Bu platforma zaten sahipsen işaretle",
     statPlatformCount: "Platform",
-    statNewMovies: "Yeni abonelikle film",
-    statAlreadyOwned: "Zaten sende var",
+    statNewMovies: "Yeni Abonelikle Film",
+    statAlreadyOwned: "Zaten Sende Var",
     statWatched: "İzledin",
-    statRentBuy: "Kirala/satın al ile izlenebilir",
-    statNowhere: "Hiçbir yerde yok",
-    statNeedsReview: "Eşleşme kontrolü önerilir",
-    statTotal: "Toplam watchlist",
-    catalogBadge: (name) => `${name} kataloğu`,
-    watchedToggleTitle: "İzledim işaretle",
+    statRentBuy: "Kirala/Satın Al ile İzlenebilir",
+    statNowhere: "Hiçbir Yerde Yok",
+    statNeedsReview: "Eşleşme Kontrolü Önerilir",
+    statTotal: "Toplam Watchlist",
+    catalogBadge: (name) => `${name} Kataloğu`,
+    watchedToggleTitle: "İzledim İşaretle",
     reviewToggleTitle: "Eşleşme yanlış olabilir, kontrol et",
     justwatchMatchNote: (m) => `JustWatch: ${m.matched_title} (${m.matched_year ?? "?"})`,
     alsoOnPrefix: "Ayrıca:",
-    alreadyAvailableTitle: (platforms, count) => `Zaten izleyebilirsin - ${platforms} (${count} film)`,
-    orderLabel: (n) => `${n}. sıra`,
+    alreadyAvailableTitle: (platforms, count) => `Zaten izleyebilirsin · ${platforms} (${count} film)`,
+    orderLabel: (n) => `${n}. Sıra`,
     movieCountLabel: (n) => `${n} film`,
     rentBuyTitle: (n) => `Kirala/Satın Al ile İzleyebilirsin (${n})`,
     rentLabel: "Kirala",
     buyLabel: "Satın Al",
     nowhereTitle: (n) => `Hiçbir platformda abonelikle bulunamadı (${n})`,
-    watchedListTitle: (n) => `İzlediğin filmler (${n})`,
-    undoBtn: "Geri al",
-    removedTitle: (n) => `Watchlist'ten çıkmış (${n})`,
-    errorsTitle: (n) => `Eşleştirilemeyen filmler (${n})`,
-    addFilmTriggerTitle: "Film ekle",
-    removeToggleTitle: "Listeden kaldır",
+    watchedListTitle: (n) => `İzlediğin Filmler (${n})`,
+    undoBtn: "Geri Al",
+    removedTitle: (n) => `Watchlist'ten Çıkmış (${n})`,
+    errorsTitle: (n) => `Eşleştirilemeyen Filmler (${n})`,
+    addFilmTriggerTitle: "Film Ekle",
+    removeToggleTitle: "Listeden Kaldır",
     removeFilmConfirm: "Bu film watchlist'ten kalıcı olarak kaldırılsın mı? (Letterboxd'daki gerçek watchlist'ini etkilemez, sadece bu araçtaki görünümü.)",
     movieSearchPlaceholder: "Listende ara...",
     searchNoResults: "Bu isimle eşleşen film bulunamadı.",
@@ -152,7 +151,6 @@ const I18N = {
     pageTitle: "WatchPlan",
     brandName: "WatchPlan",
     feedbackLink: "Feedback",
-    bmcLink: "☕ Buy me a coffee",
     feedbackModalTitle: "Feedback",
     feedbackMovieLabel: "Which movie is this about? (optional)",
     feedbackMoviePlaceholder: "Search your list...",
@@ -164,29 +162,28 @@ const I18N = {
     feedbackEmptyError: "You need to write a message.",
     feedbackSendError: "Couldn't send, please try again in a bit.",
     subtitle: "Drag in your Letterboxd watchlist CSV and see which order to subscribe to which platform.",
-    howtoSummary: "How does this work?",
-    howtoStep1: "Go to <strong>Profile → Watchlist → Export watchlist</strong> on Letterboxd — a <code>.csv</code> file downloads directly (no zip).",
+    howtoSummary: "How Does This Work?",
+    howtoStep1: "On Letterboxd, go to <strong>Profile → Watchlist → Export watchlist</strong>; a <code>.csv</code> file downloads directly.",
     howtoStep2: "Watch step 1 as a video (56s)",
     howtoVideoPlayLabel: "Play the video",
-    howtoStep3: "Drag that CSV file onto the box below (or click it and choose the file).",
-    howtoStep4: "Pick your country above — Turkey by default. Subscription options in that country are searched on JustWatch, which can take a bit.",
-    howtoStep5: "Once the search finishes, you'll see which order to subscribe to which platform to get through your watchlist fastest.",
-    howtoStep6: "The <strong>&check;</strong> on a poster's top-right marks it watched; the yellow <strong>&#9888;</strong> on the top-left means the match is worth double-checking.",
-    howtoNote: "Your watchlist is remembered after the first upload and loads automatically next time you open the page. To update it, just drag in a new CSV.",
-    devModeLabel: "Developer mode",
-    devClearBtn: "Clear cache",
+    howtoStep3: "Drag that CSV file onto the box below (or click and choose it).",
+    howtoStep4: "Pick your country above (Turkey by default).",
+    howtoStep5: "When the search finishes, you'll see which platform to subscribe to in which order.",
+    howtoStep6: "The <strong class=\"ic-ok\">&check;</strong> on a poster's top-right marks it watched; the <strong class=\"ic-warn\">&#9888;</strong> on the top-left suggests checking the match.",
+    devModeLabel: "Developer Mode",
+    devClearBtn: "Clear Cache",
     devClearBtnWorking: "Clearing...",
     devClearConfirm: "Clear the entire JustWatch match cache? Every movie will be searched from scratch next time.",
     countryLabel: "Country",
     langLabel: "Language",
-    dropzoneText: "Drag your CSV file here",
+    dropzoneText: "Drag Your CSV File Here",
     dropzoneSub: "Or click to choose",
     presetImdb: "Load IMDb Top 250",
     presetLetterboxd: "Load Letterboxd Top 500",
     presetLoading: "Loading...",
     presetConfirm: (count) =>
       `This will run one big search for ${count} movies on JustWatch. If you've already tried it, avoid triggering it again back-to-back - it can get JustWatch's API to temporarily block you. Continue?`,
-    clearWatchlistBtn: "Remove list",
+    clearWatchlistBtn: "Remove List",
     clearWatchlistBtnWorking: "Removing...",
     progressTitle: "Searching JustWatch…",
     progressLoading: "Loading...",
@@ -195,50 +192,50 @@ const I18N = {
     progressPhaseBatch: (done, total) => `Pre-searching movies (${done}/${total})`,
     progressError: "Error: ",
     fileTypeAlert: "Please choose a .csv file.",
-    randomPoolLabel: "Which platforms should random picks come from? (leave empty for the whole watchlist)",
-    randomPickBtn: "🎲 Pick a random movie",
-    randomTriggerTitle: "Pick a random movie",
+    randomPoolLabel: "Which platforms should random picks come from?\n(leave empty for the whole watchlist)",
+    randomPickBtn: "🎲 Pick a Random Movie",
+    randomTriggerTitle: "Pick a Random Movie",
     randomEmptyPool: "No movies left in this pool - pick another platform or undo some watched movies.",
     randomNoOffers: "This movie isn't available with a subscription anywhere.",
-    randomRerollBtn: "🎲 Another one",
-    markWatchedBtn: "Mark as watched",
-    rematchTitlePrefix: "Check the match",
+    randomRerollBtn: "Another One",
+    markWatchedBtn: "Mark as Watched",
+    rematchTitlePrefix: "Check the Match",
     rematchSubtitle: (m) => `JustWatch results for ${m.title} (${m.year})`,
     rematchSearching: "Searching...",
     rematchNoResults: "No results found. Try a different search term.",
     rematchSaving: "Saving...",
     rematchSearchPlaceholder: "Search JustWatch with a different name...",
     rematchSearchBtn: "Search",
-    randomModalTitle: "Random Movie",
+    randomModalTitle: 'Random <span class="accent">Movie</span>',
     sidebarTitle: "Subscription Order",
     ownedBadge: "Owned",
     ownedCheckTitle: "Check if you already have this platform",
     statPlatformCount: "Platforms",
-    statNewMovies: "Movies with new subs",
-    statAlreadyOwned: "Already have",
+    statNewMovies: "Movies With New Subs",
+    statAlreadyOwned: "Already Have",
     statWatched: "Watched",
-    statRentBuy: "Rent/buy available",
-    statNowhere: "Unavailable anywhere",
-    statNeedsReview: "Matches to review",
-    statTotal: "Total watchlist",
-    catalogBadge: (name) => `${name} catalog`,
-    watchedToggleTitle: "Mark as watched",
+    statRentBuy: "Rent/Buy Available",
+    statNowhere: "Unavailable Anywhere",
+    statNeedsReview: "Matches to Review",
+    statTotal: "Total Watchlist",
+    catalogBadge: (name) => `${name} Catalog`,
+    watchedToggleTitle: "Mark as Watched",
     reviewToggleTitle: "Match might be wrong, check it",
     justwatchMatchNote: (m) => `JustWatch: ${m.matched_title} (${m.matched_year ?? "?"})`,
     alsoOnPrefix: "Also on:",
-    alreadyAvailableTitle: (platforms, count) => `You can already watch these - ${platforms} (${count} movies)`,
+    alreadyAvailableTitle: (platforms, count) => `You can already watch these · ${platforms} (${count} movies)`,
     orderLabel: (n) => `Step ${n}`,
     movieCountLabel: (n) => `${n} movies`,
     rentBuyTitle: (n) => `Available to Rent/Buy (${n})`,
     rentLabel: "Rent",
     buyLabel: "Buy",
     nowhereTitle: (n) => `Not available with a subscription anywhere (${n})`,
-    watchedListTitle: (n) => `Movies you've watched (${n})`,
+    watchedListTitle: (n) => `Movies You've Watched (${n})`,
     undoBtn: "Undo",
-    removedTitle: (n) => `Removed from your watchlist (${n})`,
-    errorsTitle: (n) => `Movies that couldn't be matched (${n})`,
-    addFilmTriggerTitle: "Add a movie",
-    removeToggleTitle: "Remove from list",
+    removedTitle: (n) => `Removed From Your Watchlist (${n})`,
+    errorsTitle: (n) => `Movies That Couldn't Be Matched (${n})`,
+    addFilmTriggerTitle: "Add a Movie",
+    removeToggleTitle: "Remove From List",
     removeFilmConfirm: "Permanently remove this movie from your watchlist here? (Doesn't touch your actual Letterboxd watchlist, just this tool's view of it.)",
     movieSearchPlaceholder: "Search your list...",
     searchNoResults: "No movie matches that name.",
@@ -723,7 +720,7 @@ function sidebarRow(entry, plan) {
     nowhere: plan.not_available_anywhere.length,
   }[entry.type];
   const el = document.createElement("div");
-  el.className = "side-link";
+  el.className = `side-link side-link--${entry.type}`;
   el.innerHTML = `<span>${label}</span><b>${count}</b>`;
   return el;
 }
@@ -808,8 +805,9 @@ function panelForEntry(entry, plan) {
 function nowhereChip(movie) {
   const chip = document.createElement("span");
   chip.className = "nowhere-chip" + (movie.needs_review ? " needs-review" : "");
-  const label = movie.needs_review ? " ⚠" : "";
-  chip.innerHTML = `${movie.title} <span class="yr">${movie.year}</span>${label}`;
+  // Uyari isareti etiketin solunda; ucgeni CSS ciziyor.
+  const mark = movie.needs_review ? `<span class="review-mark" aria-hidden="true"></span>` : "";
+  chip.innerHTML = `${mark}${movie.title} <span class="yr">${movie.year}</span>`;
   if (movie.needs_review) {
     chip.title = t("reviewToggleTitle");
     chip.addEventListener("click", () => openRematchModal(movie));
@@ -999,6 +997,7 @@ async function uploadCsv(csvText, preset = null) {
   progressPanel.classList.remove("hidden");
   progressFill.classList.remove("busy");
   progressFill.style.width = "6%";
+  progressPercent.textContent = "";
   progressDetail.textContent = t("progressLoading");
 
   const res = await fetch("/api/upload", {
@@ -1033,6 +1032,7 @@ function pollStatus(jobId) {
       const pct = Math.max(6, Math.round((job.done / job.total) * 100));
       progressFill.classList.remove("busy");
       progressFill.style.width = pct + "%";
+      progressPercent.textContent = pct + "%";
       progressDetail.textContent = `[${job.done}/${job.total}] ${job.current}`;
     } else if (job.total > 0 && (job.phase === "index" || job.phase === "batch")) {
       progressFill.classList.add("busy");
@@ -1613,8 +1613,7 @@ function movieCard(movie, platformName, excludePlatforms) {
 
   if (movie.needs_review && movie.matched_title) {
     const reviewNote = document.createElement("div");
-    reviewNote.className = "movie-also-on";
-    reviewNote.style.color = "#ffc857";
+    reviewNote.className = "movie-also-on movie-review-note";
     reviewNote.textContent = t("justwatchMatchNote", movie);
     a.appendChild(reviewNote);
   }
@@ -1696,8 +1695,7 @@ function rentBuyCard(movie) {
 
   if (movie.needs_review && movie.matched_title) {
     const reviewNote = document.createElement("div");
-    reviewNote.className = "movie-also-on";
-    reviewNote.style.color = "#ffc857";
+    reviewNote.className = "movie-also-on movie-review-note";
     reviewNote.textContent = t("justwatchMatchNote", movie);
     card.appendChild(reviewNote);
   }
@@ -1714,7 +1712,12 @@ function rentBuyCard(movie) {
     link.target = "_blank";
     link.rel = "noopener";
     const typeLabel = t(offer.type === "RENT" ? "rentLabel" : "buyLabel");
-    link.textContent = offer.price ? `${offer.platform} ${typeLabel} · ${offer.price}` : `${offer.platform} ${typeLabel}`;
+    const provider = document.createElement("span");
+    provider.className = "rentbuy-provider";
+    provider.textContent = offer.platform;
+    const deal = document.createElement("span");
+    deal.textContent = offer.price ? `${typeLabel} · ${offer.price}` : typeLabel;
+    link.append(provider, deal);
     prices.appendChild(link);
   }
   card.appendChild(prices);
@@ -1762,22 +1765,28 @@ function renderResults(plan) {
 
   const addFilmBtn = document.createElement("button");
   addFilmBtn.type = "button";
-  addFilmBtn.className = "random-trigger-btn";
+  addFilmBtn.className = "random-trigger-btn random-trigger-btn--add";
   addFilmBtn.title = t("addFilmTriggerTitle");
-  addFilmBtn.textContent = "➕";
+  addFilmBtn.setAttribute("aria-label", t("addFilmTriggerTitle"));
   addFilmBtn.addEventListener("click", openAddFilmModal);
   headerBtns.appendChild(addFilmBtn);
 
   const randomBtn = document.createElement("button");
   randomBtn.type = "button";
-  randomBtn.className = "random-trigger-btn";
+  randomBtn.className = "random-trigger-btn random-trigger-btn--dice";
   randomBtn.title = t("randomTriggerTitle");
-  randomBtn.textContent = "🎲";
+  randomBtn.setAttribute("aria-label", t("randomTriggerTitle"));
   randomBtn.addEventListener("click", showRandomPick);
   headerBtns.appendChild(randomBtn);
 
   sideHeader.appendChild(headerBtns);
   controlSideEl.appendChild(sideHeader);
+
+  // Biletler ayri bir kapta - mobilde bu kap yatay kaydirilan serit oluyor,
+  // baslik ve +/zar butonlari ise ustunde sabit kaliyor.
+  const sideList = document.createElement("div");
+  sideList.className = "control-side-list";
+  controlSideEl.appendChild(sideList);
 
   let sawCategory = false;
   let dividerPlaced = false;
@@ -1787,7 +1796,7 @@ function renderResults(plan) {
     } else if (sawCategory && !dividerPlaced) {
       const divider = document.createElement("div");
       divider.className = "side-divider";
-      controlSideEl.appendChild(divider);
+      sideList.appendChild(divider);
       dividerPlaced = true;
     }
 
@@ -1797,7 +1806,7 @@ function renderResults(plan) {
       activePanelKey = entry.key;
       renderResults(plan);
     });
-    controlSideEl.appendChild(row);
+    sideList.appendChild(row);
   }
 
   const activeEntry = entries.find((e) => e.key === activePanelKey);
