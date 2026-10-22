@@ -2342,12 +2342,16 @@ button.top-link {
   .page:has(.dropzone.compact) .top::before,
   .page:has(#progress:not(.hidden)) .top::before { top: -60px; right: 8px; opacity: 0.14; }
   .brand-name { font-size: 48px; }
-  .brand-mark { width: 42px; height: 42px; }
-  .brand-mark { width: 34px; height: 34px; }
-  .howto-video-card { padding-left: 0; border-left: none; flex-basis: 100%; }
+  .brand-mark { width: 52px; height: 52px; }
+  .howto-content { grid-template-columns: 1fr; row-gap: 20px; }
+  .howto-steps { padding-right: 0; }
+  .howto-video-card { width: auto; max-width: 420px; padding-left: 0; border-left: none; }
 
-  .upload-bar:has(.dropzone.compact) { flex-direction: column; }
-  .dropzone.compact { border-radius: var(--radius) var(--radius) 0 0; }
+  .upload-bar:has(.dropzone.compact),
+  .page:has(#progress:not(.hidden)) .upload-bar { flex-direction: column; align-items: stretch; height: auto; }
+  .dropzone.compact { min-height: 52px; border-radius: var(--radius) var(--radius) 0 0; }
+  .upload-bar:has(.dropzone.compact) .csv-actions { margin: 0; }
+  .upload-bar:has(.dropzone.compact) .csv-action-btn { height: auto; }
   .upload-bar:has(.dropzone.compact) .csv-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -2424,73 +2428,241 @@ button.top-link {
 }
 
 @media (max-width: 640px) {
-  .page { padding: 18px 16px 48px; }
-  .top-bar { gap: 12px; }
-  .brand-name { font-size: 40px; }
-  .brand-mark { width: 36px; height: 36px; }
-  /* marka ve "Geri bildirim" ayni satirda, dil/ulke secimi altta tam genislik */
+  /* --- Mobil (cizim: results-mobile-three-screens) ---
+     .page:has(...) kurallarinin ozgulugu yuksek oldugu icin ayni
+     seciciler burada tekrar ediliyor. */
+  .page,
+  .page:has(.dropzone.compact),
+  .page:has(#progress:not(.hidden)) { padding: 12px 16px 40px; }
+
+  .top-bar { gap: 10px 12px; min-height: 0; }
+  .page:not(:has(.dropzone.compact)) .top-bar,
+  .page:has(#progress:not(.hidden)) .top-bar { min-height: 0; }
+  .page:not(:has(.dropzone.compact)) .top { padding-top: 0; margin-bottom: 16px; }
+  .page:has(#progress:not(.hidden)) .top { padding-top: 0; }
+  .brand { gap: 8px; }
+  .brand-name,
+  .page:not(:has(.dropzone.compact)) .brand-name,
+  .page:has(#progress:not(.hidden)) .brand-name { font-size: 40px; line-height: 44px; letter-spacing: -1.2px; }
+  .brand-mark,
+  .page:not(:has(.dropzone.compact)) .brand-mark,
+  .page:has(#progress:not(.hidden)) .brand-mark { width: 44px; height: 44px; margin: 0 -8px 0 -9px; }
+  /* marka ve "Geri Bildirim" ayni satirda, dil/ulke secimi altta sagda */
   .top-links { display: contents; }
-  .country-row { width: 100%; }
-  .country-row select:last-of-type { flex: 1; min-width: 0; }
-  .country-row select { padding: 7px 30px 7px 11px; font-size: 13px; background-position: right 9px center, 0 0; }
-  .subtitle { font-size: 14px; }
+  .top-link { font-size: 11px; line-height: 16px; }
+  .country-row { width: 100%; justify-content: flex-end; gap: 10px; }
+  .country-row select { height: 30px; padding: 0 26px 0 10px; font-size: 11px; border-radius: 4px; background-position: right 8px center, 0 0; }
+  #lang-select { width: 82px; }
+  #country-select { width: 109px; }
+  .page:has(.dropzone.compact) .top { margin-bottom: 8px; }
+  .subtitle { font-size: 16px; line-height: 23px; margin: 12px 0 0; }
 
-  .howto-box summary { font-size: 16px; padding: 13px 46px 13px 16px; }
-  .howto-content { padding: 18px 16px 4px; gap: 22px; }
-  .howto-steps { font-size: 14px; }
-  .howto-steps li { padding-left: 44px; }
-  .howto-steps li::before { width: 30px; height: 30px; font-size: 14px; }
+  .howto-box,
+  .page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) .howto-box { margin-bottom: 8px; }
+  .howto-box summary,
+  .page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) .howto-box:not([open]) summary,
+  .page:has(#progress:not(.hidden)) .howto-box summary {
+    font-size: 14px; line-height: 20px; padding: 7px 40px 7px 14px;
+  }
+  .howto-box[open] summary { margin: 14px 14px 0; padding-left: 0; }
+  .howto-content { grid-template-columns: 1fr; row-gap: 18px; padding: 14px 14px 16px; }
+  .howto-steps { font-size: 14px; line-height: 20px; padding-right: 0; }
+  .howto-steps li { padding: 4px 0 4px 44px; min-height: 32px; margin-bottom: 10px; }
+  .howto-steps li::before { width: 32px; height: 32px; font-size: 16px; }
+  .howto-video-card { width: auto; padding-left: 0; border-left: none; }
+  .howto-video-card-label { font-size: 14px; }
 
-  .dropzone { --notch: 22px; padding: 44px 40px; }
-  .dropzone::before { inset: 16px 32px; }
+  /* ilk ziyaret: bilet CSS cizimiyle */
+  .dropzone { --notch: 22px; padding: 40px 34px; }
+  .dropzone::before { inset: 16px 28px; }
   .dropzone::after { inset: 12px 8px; background-size: 8px 100%; }
-  .dropzone-icon { width: 48px; height: 48px; }
-  .dropzone-text { font-size: 26px; }
-  .dropzone-sub { font-size: 15px; }
-  .csv-actions { flex-direction: column; align-items: stretch; gap: 10px; }
-  .csv-action-btn { min-width: 0; padding: 12px 14px; font-size: 14px; }
+  .dropzone-icon { width: 48px; height: 58px; }
+  .dropzone-text { font-size: 26px; line-height: 32px; }
+  .dropzone-sub { font-size: 16px; line-height: 22px; }
 
-  /* istatistikler: 4x2 sikisik izgara */
-  .stat-row-secondary { grid-template-columns: repeat(4, 1fr); row-gap: 14px; }
-  .summary-stat-sm { padding: 2px 4px; gap: 2px; }
-  .summary-stat-sm .num { font-size: 20px; }
-  .summary-stat-sm .label { font-size: 10.5px; }
+  /* liste yukluyken: 60px CSV seridi, altinda iki hazir liste yan yana,
+     en altta tam genislik "Listeyi Kaldir" - her biri ayri kutu */
+  .upload-bar:has(.dropzone.compact),
+  .page:has(#progress:not(.hidden)) .upload-bar {
+    display: block;
+    height: auto;
+    border: none;
+    background: none;
+    box-shadow: none;
+  }
+  .dropzone.compact {
+    height: 60px;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bar);
+  }
+  .dropzone.compact .dropzone-inner { gap: 16px; }
+  .dropzone.compact .dropzone-icon { width: 26px; height: 26px; }
+  .dropzone.compact .dropzone-text { font-size: 15px; }
+  .upload-bar:has(.dropzone.compact) .csv-actions {
+    display: grid;
+    grid-template-columns: 182fr 153fr;
+    gap: 8px;
+    margin-top: 6px;
+    border: none;
+  }
+  .upload-bar:has(.dropzone.compact) .csv-action-btn,
+  .upload-bar:has(.dropzone.compact) .csv-action-btn:first-child,
+  .page:has(#progress:not(.hidden)) .upload-bar .csv-action-btn {
+    height: 38px;
+    padding: 0 8px;
+    gap: 6px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bar);
+  }
+  .upload-bar:has(.dropzone.compact) .csv-action-btn::before { width: 16px; height: 16px; }
+  .upload-bar:has(.dropzone.compact) .csv-action-btn--clear {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+  .upload-bar:has(.dropzone.compact) .csv-action-btn--clear::before { width: 18px; height: 18px; }
+  .upload-bar:not(:has(.dropzone.compact)) .csv-actions { flex-direction: column; align-items: stretch; gap: 10px; }
+  .upload-bar:not(:has(.dropzone.compact)) .csv-action-btn { height: 48px; padding: 0 14px; font-size: 15px; }
 
-  .control-grid { grid-template-columns: repeat(3, 1fr); gap: 16px 10px; }
-  .movie-title { font-size: 13.5px; }
-  .movie-year { font-size: 12px; }
-  .movie-also-on { font-size: 10px; }
-  .rentbuy-chip { font-size: 10px; padding: 5px 7px; }
-  .nowhere-chip { font-size: 13.5px; padding: 7px 12px; gap: 8px; }
-  .platform-header { gap: 10px; }
-  .platform-month { font-size: 11.5px; padding: 4px 12px; }
-  .platform-name { font-size: 28px; }
+  /* istatistikler: 2 sutun x 4 satir, ince ayraclarla */
+  .summary { margin-top: 16px; }
+  .country-badge { margin: 0 0 8px 2px; }
+  .stat-row-secondary { grid-template-columns: 1fr 1fr; row-gap: 0; }
+  .summary-stat-sm,
+  .summary-stat-sm:nth-child(5) {
+    min-height: 77px;
+    padding: 10px 6px;
+    gap: 4px;
+    border-left: none;
+    border-top: 1px solid var(--border-soft);
+  }
+  .summary-stat-sm:nth-child(-n+2) { border-top: none; }
+  .summary-stat-sm:nth-child(even) { border-left: 1px solid var(--border-soft); }
+  .summary-stat-sm .num { font-size: 24px; line-height: 28px; }
+  .summary-stat-sm .label { font-size: 13px; line-height: 18px; }
 
-  /* modallar alttan acilan panel olarak */
-  .modal-overlay { align-items: flex-end; padding: 0; }
-  .modal-box {
+  /* kontrol odasi: sira basligi + yatay bilet seridi, sonra arama, sonra
+     secili platform; ic ice kaydirma yok, sayfa akar */
+  .results:not(.hidden) { display: flex; flex-direction: column; margin-top: 14px; }
+  .results .control-shell { display: contents; }
+  .results .control-side { order: 1; }
+  .results .movie-search-row { order: 2; margin: 12px 0 14px; }
+  .results .control-main { order: 3; }
+  .control-side {
+    padding: 0;
+    box-shadow: none;
+  }
+  .control-side-header { padding: 0 2px 10px; margin-bottom: 10px; border-bottom: none; }
+  .control-side-header-btns { gap: 16px; }
+  .random-trigger-btn { width: 36px; height: 36px; background-size: 18px; }
+  .random-trigger-btn--dice { background-size: 20px; }
+  .control-side-list { gap: 8px; margin: 0 -16px; padding: 0 16px 10px; scroll-padding: 16px; }
+  .hticket {
+    width: 156px;
+    min-height: 78px;
+    --num-col: 44px;
+    grid-template-columns: var(--num-col) 1fr auto;
+    column-gap: 10px;
+    padding: 10px 10px 10px 0;
+  }
+  .hticket.active { padding: 9px 9px 9px 0; }
+  .hticket::before { width: 10px; }
+  .hticket-order { padding-left: 14px; font-size: 22px; line-height: 26px; }
+  .hticket-owned-badge { padding-left: 10px; font-size: 9px; }
+  .hticket:has(.hticket-owned-check:checked) { --num-col: 58px; }
+  .hticket-name { font-size: 16px; line-height: 19px; }
+  .hticket .platform-count { font-size: 12px; line-height: 16px; }
+  .hticket-owned-check { width: 20px; height: 20px; }
+  .side-link {
+    width: 118px;
+    min-width: 0;
     max-width: none;
-    max-height: 88vh;
-    border-radius: 18px 18px 0 0;
-    border-bottom: none;
-    padding: 26px 20px 28px;
-    -webkit-mask: none;
-    mask: none;
+    font-size: 13px;
+    line-height: 16px;
+    padding: 10px 10px;
+  }
+  .side-link b { font-size: 18px; }
+  /* cizimdeki gibi: once "Zaten Sende Var", hemen ardindan biletler;
+     diger iki kategori seridin sonunda */
+  .side-link--rentbuy,
+  .side-link--nowhere { order: 2; }
+
+  .control-main {
+    height: auto;
+    padding: 0;
+    overflow: visible;
+    background: none;
+    border: none;
+    box-shadow: none;
+  }
+  .control-main .platform-header { gap: 14px; min-height: 46px; }
+  .platform-month { height: 30px; padding: 0 14px; font-size: 11px; }
+  .platform-name { font-size: 42px; line-height: 46px; }
+  .control-main .platform-name + .platform-count { margin: 6px 0 0 -6px; font-size: 16px; }
+  .platform-bar { margin: 8px 0 14px; }
+  .panel > .platform-header .platform-name.cat-positive,
+  .panel > .platform-header .platform-name.cat-warn,
+  .panel > .platform-header .platform-name.cat-dim { font-size: 28px; line-height: 34px; }
+  .panel > .control-main-sub,
+  .panel:has(.cat-dim) > .control-main-sub { font-size: 14px; line-height: 20px; margin-bottom: 14px; }
+
+  .control-grid { grid-template-columns: repeat(3, 1fr); gap: 16px 12px; }
+  .movie-poster { aspect-ratio: 2 / 3; }
+  .watched-toggle,
+  .remove-toggle,
+  .review-toggle { width: 32px; height: 32px; background-size: 18px, auto; }
+  .watched-toggle { top: 4px; right: 4px; }
+  .remove-toggle { bottom: 4px; right: 4px; }
+  .review-toggle { top: 4px; left: 4px; background-size: 24px; }
+  .movie-title { font-size: 14px; line-height: 17px; }
+  .movie-year { font-size: 12px; line-height: 16px; }
+  .movie-also-on { font-size: 11px; line-height: 15px; }
+  .rentbuy-chip { font-size: 10px; padding: 4px 7px; }
+  .nowhere-chip { font-size: 13.5px; padding: 0 10px; min-height: 34px; gap: 8px; }
+
+  /* modallar alttan acilan panel: ustte tek ince altin kenar, yanik
+     bantlar yok */
+  .modal-overlay { align-items: flex-end; padding: 0; background: rgba(6, 6, 5, 0.68); }
+  .modal-box,
+  #random-modal .modal-box,
+  #rematch-modal .modal-box,
+  #add-film-modal .modal-box,
+  #feedback-modal .modal-box {
+    max-width: none;
+    max-height: 92vh;
+    border-radius: 24px 24px 0 0;
+    border: none;
+    border-top: 1px solid var(--accent);
+    padding: 28px 16px 24px;
+    background: #1a1b17;
   }
   .modal-box::before {
     content: "";
     position: absolute;
-    top: 9px;
+    top: 12px;
     left: 50%;
-    width: 44px;
-    height: 4px;
-    margin-left: -22px;
-    border-radius: 2px;
-    background: var(--border-strong);
+    width: 56px;
+    height: 5px;
+    margin-left: -28px;
+    border-radius: 3px;
+    background: #777a70;
   }
-  .modal-title { font-size: 25px; }
-  .modal-title::before { width: 26px; height: 26px; }
-  .candidate-grid { grid-template-columns: repeat(3, 1fr); }
-  .random-poster { width: 170px; }
-  .random-actions { grid-template-columns: 1fr; }
+  .modal-header { margin-bottom: 14px; padding-right: 40px; }
+  .modal-title { font-size: 30px; line-height: 36px; column-gap: 12px; }
+  .modal-title::before { width: 28px; height: 28px; }
+  .modal-close { position: absolute; top: 14px; right: 13px; width: 32px; height: 32px; }
+  .random-pool-panel summary { font-size: 12px; line-height: 18px; padding: 10px 40px 10px 14px; }
+  .random-poster { width: 160px; margin-bottom: 16px; }
+  .random-title { font-size: 20px; line-height: 25px; }
+  .random-link { font-size: 14px; padding: 5px 18px; }
+  .random-actions { grid-template-columns: 1fr; gap: 12px; }
+  .random-btn,
+  .random-actions .undo-watched-btn { height: 52px; font-size: 17px; padding: 0 16px; }
+  .candidate-grid,
+  #rematch-modal .candidate-grid,
+  #add-film-modal .candidate-grid { grid-template-columns: repeat(3, 1fr); gap: 14px 10px; }
 }
