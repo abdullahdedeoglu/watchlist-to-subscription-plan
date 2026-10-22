@@ -208,6 +208,8 @@ body::after {
 .page:has(#progress:not(.hidden)) .brand-name { width: 380px; }
 
 .brand {
+  margin: 0;
+  font: inherit;
   display: flex;
   align-items: center;
   gap: 14px;
