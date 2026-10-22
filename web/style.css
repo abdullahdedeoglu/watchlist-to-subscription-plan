@@ -4,7 +4,7 @@
    isigi ve perforasyonlu film seridi kenarlari. Doku sadece basliga,
    zemine ve biletlere; posterlerin, yazilarin ve butonlarin arkasi
    sakin kalir.
-   Baslik = Source Serif 4 (kalin italik), govde/rakam = Roboto Slab,
+   Baslik = Source Serif 4 (kalin italik / duz), govde = Fira Sans,
    buyuk harfli etiket = IBM Plex Mono.
    ============================================================ */
 
@@ -44,9 +44,14 @@
   --gold-metal-btn: linear-gradient(135deg, #c29855 0%, #dab56d 22%, #f4d695 48%, #e8be70 68%, #c9a066 100%);
   --radius: 8px;            /* buyuk panel */
   --radius-sm: 6px;         /* panel / giris / dugme */
-  --f-display: 'Source Serif 4', Georgia, serif;   /* kalin italik: logo, buyuk basliklar */
-  --f-body: 'Roboto Slab', Rockwell, Georgia, serif; /* govde, rakamlar, isimler */
-  --f-mono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace; /* buyuk harfli kucuk etiketler */
+  /* Cizimden yakindan olculen tipografi: kalin italik serif (logo, buyuk
+     basliklar), duz serif (bilet adlari, istatistik rakamlari, acilir
+     bolum basliklari, yukleme yazisi), humanist sans (etiketler, film
+     adlari, yillar, dugmeler, govde), mono (buyuk harfli kucuk etiketler). */
+  --f-display: 'Source Serif 4', Georgia, serif;
+  --f-serif: 'Source Serif 4', Georgia, serif;
+  --f-body: 'Fira Sans', 'Segoe UI', system-ui, sans-serif;
+  --f-mono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace;
   font-family: var(--f-body);
   color-scheme: dark;
 }
@@ -61,36 +66,26 @@ html, body {
   min-height: 100vh;
 }
 
-/* Zemin katmanlari (alttan uste, spec 1.1): duz zemin -> gren %18 ->
-   kenar isik lekeleri -> yan kenar emulsiyonu -> film seridi -> isik.
-   Gren ve lekeler tek sabit katmanda; icerik her zaman onlarin ustunde. */
+/* Zemin katmanlari (alttan uste): duz zemin -> gren -> koselerdeki yanik
+   turuncu toz (cizimden olculen parlakliga gore uretildi) -> yan kenar
+   emulsiyonu -> film seridi -> isik. Icerik her zaman bunlarin ustunde. */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.5;
   background:
-    /* kenar isik lekeleri: sag ust, sol alt, sag alt */
-    radial-gradient(560px 280px at 100% 0%, rgba(185, 79, 30, 0.30), rgba(113, 53, 29, 0.12) 55%, transparent 100%),
-    radial-gradient(360px 280px at 0% 100%, rgba(185, 79, 30, 0.30), rgba(113, 53, 29, 0.12) 55%, transparent 100%),
-    radial-gradient(480px 320px at 100% 100%, rgba(185, 79, 30, 0.30), rgba(113, 53, 29, 0.12) 55%, transparent 100%),
-    /* 28px yan kenar emulsiyonu, iceride 24px'te soner */
-    /* yan kenar emulsiyonu (spec katman 4, %45 opaklik gorselde) */
+    url("/assets/edge-burn.webp") 0 0 / 100% 100% no-repeat,
     url("/assets/edge-stain-left.webp") left top / 64px auto repeat-y,
     url("/assets/edge-stain-right.webp") right top / 64px auto repeat-y;
 }
 
-/* mobilde yanik sayfa cercevesi yok (spec 1.1) */
-@media (max-width: 767px) {
-  body::before,
-  body:has(.dropzone.compact)::before {
-    background:
-      radial-gradient(560px 280px at 100% 0%, rgba(185, 79, 30, 0.08), transparent 100%),
-      radial-gradient(360px 280px at 0% 100%, rgba(185, 79, 30, 0.08), transparent 100%);
-  }
-  body::after { opacity: 0.06; }
+/* sonuc ekraninda koseler daha sakin (cizimde ust koseler belirgin,
+   alt koseler soluk) */
+body:has(.dropzone.compact):not(:has(#progress:not(.hidden)))::before {
+  -webkit-mask: linear-gradient(#000 0%, rgba(0, 0, 0, 0.75) 45%, rgba(0, 0, 0, 0.3) 100%);
+  mask: linear-gradient(#000 0%, rgba(0, 0, 0, 0.75) 45%, rgba(0, 0, 0, 0.3) 100%);
 }
 
 /* gren ayri katmanda, kendi opakligiyla */
@@ -104,35 +99,34 @@ body::after {
   opacity: 0.16;
 }
 
-/* sonuc ekraninda alt lekeler yari gucte */
-body:has(.dropzone.compact)::before {
-  background:
-    radial-gradient(560px 280px at 100% 0%, rgba(185, 79, 30, 0.30), rgba(113, 53, 29, 0.12) 55%, transparent 100%),
-    radial-gradient(360px 280px at 0% 100%, rgba(185, 79, 30, 0.15), rgba(113, 53, 29, 0.06) 55%, transparent 100%),
-    radial-gradient(480px 320px at 100% 100%, rgba(185, 79, 30, 0.15), rgba(113, 53, 29, 0.06) 55%, transparent 100%),
-    /* yan kenar emulsiyonu (spec katman 4, %45 opaklik gorselde) */
-    url("/assets/edge-stain-left.webp") left top / 64px auto repeat-y,
-    url("/assets/edge-stain-right.webp") right top / 64px auto repeat-y;
+/* mobilde yanik sayfa cercevesi yok, sadece hafif kose isigi */
+@media (max-width: 767px) {
+  body::before,
+  body:has(.dropzone.compact):not(:has(#progress:not(.hidden)))::before {
+    background: url("/assets/edge-burn.webp") 0 0 / 100% 100% no-repeat;
+    opacity: 0.25;
+  }
+  body::after { opacity: 0.06; }
 }
 
-/* sayfa kenarlarindaki perforasyon seridi: 20px; ilk ziyaret/yuklemede
-   %80, sonuc ekraninda %35 (icerik kenara yakin, serit geri planda kalsin) */
+/* sayfa kenarlarindaki perforasyon seridi: cizimde 28px, parlak; sonuc
+   ekraninda geri planda */
 .page::before,
 .page::after {
   content: "";
   position: fixed;
   top: 0;
   bottom: 0;
-  width: 20px;
+  width: 26px;
   pointer-events: none;
   z-index: 0;
-  background: url("/assets/film-strip.webp") 0 0 / 20px auto repeat-y;
-  opacity: 0.8;
+  background: url("/assets/film-strip.webp") 0 0 / 26px auto repeat-y;
+  filter: sepia(0.5) saturate(1.6) brightness(1.05);
 }
 .page::before { left: 0; }
 .page::after { right: 0; transform: scaleX(-1); }
 .page:has(.dropzone.compact):not(:has(#progress:not(.hidden)))::before,
-.page:has(.dropzone.compact):not(:has(#progress:not(.hidden)))::after { opacity: 0.35; }
+.page:has(.dropzone.compact):not(:has(#progress:not(.hidden)))::after { opacity: 0.5; filter: none; }
 
 .visually-hidden {
   position: absolute !important;
@@ -204,7 +198,7 @@ body:has(.dropzone.compact)::before {
 
 /* ilk ziyaret: baslik 24px asagida, 90px; yukleme: 32px asagida, 92px.
    Ikisinde de isaret ~42x62, wordmark 80/88 */
-.page:not(:has(.dropzone.compact)) .top { padding-top: 24px; }
+.page:not(:has(.dropzone.compact)) .top { padding-top: 24px; margin-bottom: 24px; }
 .page:not(:has(.dropzone.compact)) .top-bar { min-height: 90px; }
 .page:has(#progress:not(.hidden)) .top { padding-top: 32px; }
 .page:has(#progress:not(.hidden)) .top-bar { min-height: 92px; }
@@ -473,7 +467,7 @@ button.top-link {
 .random-pool-panel summary {
   cursor: pointer;
   list-style: none;
-  font-family: var(--f-body);
+  font-family: var(--f-serif);
   font-weight: 600;
   color: var(--text);
   position: relative;
@@ -540,7 +534,7 @@ button.top-link {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 0;
-  padding: 24px 22px 24px 26px;
+  padding: 15px 22px 21px 26px;
 }
 
 .howto-steps {
@@ -574,7 +568,7 @@ button.top-link {
   border-radius: 50%;
   border: 2px solid var(--accent);
   color: var(--text);
-  font-family: var(--f-body);
+  font-family: var(--f-serif);
   font-size: 24px;
   line-height: 28px;
   font-weight: 500;
@@ -583,15 +577,15 @@ button.top-link {
   justify-content: center;
 }
 
-.howto-steps strong { color: var(--text); font-weight: 600; }
+/* cizimde adimlar duz metin: kalin ya da kod kutusu yok; 5. adimdaki
+   isaretler renkli */
+.howto-steps strong { color: var(--text); font-weight: inherit; }
+.howto-steps .ic-ok { color: var(--positive); font-weight: 700; }
+.howto-steps .ic-warn { color: var(--warn); }
 
 .howto-steps code {
-  background: var(--bg-sunken);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 1px 6px;
-  font-family: var(--f-mono);
-  font-size: 15px;
+  font-family: inherit;
+  font-size: inherit;
   color: var(--text);
 }
 
@@ -671,14 +665,6 @@ button.top-link {
   border-radius: var(--radius);
 }
 
-.howto-note {
-  margin: 0 22px;
-  padding: 12px 0 14px;
-  border-top: 1px solid var(--border-soft);
-  font-size: 14px;
-  line-height: 20px;
-  color: var(--text-dim);
-}
 
 /* ---------- Dev tools (sadece ?dev=1) ---------- */
 
@@ -781,7 +767,7 @@ button.top-link {
    diye alan ayni en-boy oraninda; ic kisim cercevenin bandi icinde koyu. */
 @media (min-width: 901px) {
   .dropzone:not(.compact) {
-    aspect-ratio: 4.082;
+    aspect-ratio: 1328 / 360;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -792,9 +778,9 @@ button.top-link {
     -webkit-mask: none;
     mask: none;
     background:
-      url("/assets/ticket-frame-v2.webp") 0 0 / 100% 100% no-repeat,
-      /* metin cevresi sakin kalsin diye ortada koyu gecis */
-      radial-gradient(40% 45% at 50% 62%, rgba(20, 22, 18, 0.85), transparent 100%) 50% 50% / 89% 90% no-repeat,
+      url("/assets/ticket-frame-v3.webp") 0 0 / 100% 100% no-repeat,
+      /* ic yuzey cizimdeki gibi cok koyu; gren hafifce secilir */
+      linear-gradient(rgba(10, 12, 10, 0.72), rgba(10, 12, 10, 0.72)) 50% 50% / 89% 90% no-repeat,
       url("/assets/grain.jpg") 50% 50% / 89% 90% no-repeat;
     filter: drop-shadow(0 18px 40px rgba(232, 145, 63, 0.18));
     transition: transform 0.12s ease, filter 0.15s ease;
@@ -830,7 +816,7 @@ button.top-link {
 .dropzone-text {
   font-family: var(--f-display);
   font-weight: 650;
-  font-size: 48px;
+  font-size: 52px;
   line-height: 56px;
   color: var(--text);
 }
@@ -888,7 +874,7 @@ button.top-link {
 }
 
 .dropzone.compact .dropzone-text {
-  font-family: var(--f-body);
+  font-family: var(--f-serif);
   font-weight: 400;
   font-size: 16px;
   line-height: 22px;
@@ -912,7 +898,7 @@ button.top-link {
   justify-content: center;
   gap: 12px;
   height: 60px;
-  padding: 0 40px;
+  padding: 0 52px;
   background: var(--bg-elevated);
   color: var(--text);
   border: 1px solid var(--accent);
@@ -970,7 +956,7 @@ button.top-link {
 .page:has(#progress:not(.hidden)) .upload-bar { height: 66px; }
 .page:has(#progress:not(.hidden)) .dropzone.compact .dropzone-icon { width: 30px; height: 30px; }
 .page:has(#progress:not(.hidden)) .dropzone.compact .dropzone-text { font-size: 18px; line-height: 24px; }
-.page:has(#progress:not(.hidden)) .upload-bar .csv-action-btn { font-size: 15px; }
+.page:has(#progress:not(.hidden)) .upload-bar .csv-action-btn { font-size: 16px; padding: 0 22px; }
 
 .upload-bar:has(.dropzone.compact) .csv-action-btn:hover { background: var(--accent-soft); }
 .upload-bar:has(.dropzone.compact) .csv-action-btn--clear:hover { background: var(--danger-soft); }
@@ -1010,10 +996,10 @@ button.top-link {
 }
 
 .progress-title {
-  font-size: 72px;
+  font-size: 82px;
   line-height: 82px;
   letter-spacing: -1.5px;
-  margin-bottom: 36px;
+  margin-bottom: 25px;
 }
 
 .progress-title::before,
@@ -1136,7 +1122,7 @@ button.top-link {
 }
 
 .summary-stat-sm .num {
-  font-family: var(--f-body);
+  font-family: var(--f-serif);
   font-variant-numeric: tabular-nums;
   font-size: 26px;
   line-height: 30px;
@@ -1431,7 +1417,7 @@ button.top-link {
 .hticket-name {
   grid-area: name;
   align-self: end;
-  font-family: var(--f-body);
+  font-family: var(--f-serif);
   font-size: 19px;
   line-height: 22px;
   font-weight: 600;
@@ -2171,7 +2157,7 @@ button.top-link {
   list-style: none;
   position: relative;
   padding: 9px 48px 9px 20px;
-  font-family: var(--f-body);
+  font-family: var(--f-serif);
   font-size: 16px;
   line-height: 22px;
   font-weight: 400;
@@ -2328,7 +2314,6 @@ button.top-link {
   .howto-steps { font-size: 14px; }
   .howto-steps li { padding-left: 44px; }
   .howto-steps li::before { width: 30px; height: 30px; font-size: 14px; }
-  .howto-note { margin: 16px 16px 0; }
 
   .dropzone { --notch: 22px; padding: 44px 40px; }
   .dropzone::before { inset: 16px 32px; }
