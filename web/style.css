@@ -8,31 +8,41 @@
    buyuk harfli etiket = IBM Plex Mono.
    ============================================================ */
 
+/* Renkler, olculer ve katmanlar tasarim/gpt-tasarim-spec.md'den. */
 :root {
-  --bg: #121210;
-  --bg-elevated: #1b1a16;
-  --bg-sunken: #0c0c0a;
-  --panel: #151411;
-  --border: #2e2b23;
-  --border-strong: #4a4435;
+  --bg: #181815;            /* sayfa zemini */
+  --panel: #141612;         /* sakin ana panel (poster ve yogun metin arkasi) */
+  --bg-elevated: #22221e;   /* kart / form yuzeyi */
+  --bg-raised: #292923;     /* hover, fiyat etiketi */
+  --bg-sunken: #10110f;     /* ic siyah: poster kontrol diski */
+  --border: #48483f;        /* normal 1px panel/giris kenari */
+  --border-soft: #35382f;   /* ic bolumler, istatistik ayraci */
+  --border-strong: #8b826d; /* acik sinir: fiyat etiketi, poster cizgisi */
   --text: #f1e9d8;
-  --text-dim: #a8a394;
-  --text-faint: #77725f;
-  --accent: #dab56d;        /* bilet altini - marka rengi */
-  --accent-bright: #f0cf8a;
-  --accent-soft: rgba(218, 181, 109, 0.13);
-  --accent-ink: #1d1608;    /* altin zemin uzerindeki koyu metin */
-  --positive: #79b7a8;      /* zaten-sende-var / basari */
+  --text-dim: #c8c4b8;      /* ikincil: yil, yardimci aciklama */
+  --text-faint: #9b9c91;    /* placeholder, devre disi */
+  --accent: #dab56d;        /* marka altini */
+  --accent-bright: #f4d695;
+  --accent-mid: #e8be70;
+  --accent-dark: #a87938;
+  --accent-soft: rgba(218, 181, 109, 0.12);
+  --accent-ink: #181815;    /* altin zemin uzerindeki koyu metin */
+  --positive: #79b7a8;      /* sahiplik */
+  --positive-bright: #96d2c3;
+  --positive-dark: #1c3935;
   --positive-soft: rgba(121, 183, 168, 0.13);
-  --warn: #ef8755;          /* eslesme kontrolu - altindan kasitli ayri ton */
+  --warn: #ef8755;          /* yalniz eslesme uyarisi */
+  --warn-dark: #44291f;
   --warn-soft: rgba(239, 135, 85, 0.14);
   --danger: #d9644f;
   --danger-soft: rgba(217, 100, 79, 0.13);
-  --glow: #e8913f;          /* projeksiyon isigi / film seridi parlamasi */
-  /* metalik altin: ustte parlak, ortada keskin bir golge bandi, altta sicak */
-  --gold-metal: linear-gradient(180deg, #f7dfa3 0%, #e2b86c 46%, #c8923f 54%, #dcae62 100%);
-  --radius: 12px;
-  --radius-sm: 7px;
+  --burnt: #b94f1e;         /* yalniz atmosfer, durum rengi degil */
+  /* metalik altin: 135 derece, bes durak */
+  --gold-metal: linear-gradient(135deg, #a87938 0%, #dab56d 22%, #f4d695 48%, #e8be70 68%, #b98c47 100%);
+  /* dugmelerde koyu uclar %15 acilmis hali - koyu yazi okunur kalsin */
+  --gold-metal-btn: linear-gradient(135deg, #c29855 0%, #dab56d 22%, #f4d695 48%, #e8be70 68%, #c9a066 100%);
+  --radius: 8px;            /* buyuk panel */
+  --radius-sm: 6px;         /* panel / giris / dugme */
   --f-display: 'Source Serif 4', Georgia, serif;   /* kalin italik: logo, buyuk basliklar */
   --f-body: 'Roboto Slab', Rockwell, Georgia, serif; /* govde, rakamlar, isimler */
   --f-mono: 'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace; /* buyuk harfli kucuk etiketler */
@@ -45,33 +55,69 @@
 html, body {
   margin: 0;
   padding: 0;
-  background:
-    radial-gradient(1100px 520px at 70% -10%, rgba(232, 145, 63, 0.10), transparent 60%),
-    radial-gradient(150px 120% at 0% 50%, rgba(214, 104, 34, 0.24), transparent 75%),
-    radial-gradient(150px 120% at 100% 50%, rgba(214, 104, 34, 0.24), transparent 75%),
-    url("/assets/grain.jpg") 0 0 / 512px repeat,
-    var(--bg);
-  background-attachment: fixed;
+  background: var(--bg);
   color: var(--text);
   min-height: 100vh;
 }
 
-/* sayfa kenarlarindaki perforasyonlu film seridi (genis ekranlarda),
-   kenarlara dogru yanik turuncu bir parlama ile */
+/* Zemin katmanlari (alttan uste, spec 1.1): duz zemin -> gren %18 ->
+   kenar isik lekeleri -> yan kenar emulsiyonu -> film seridi -> isik.
+   Gren ve lekeler tek sabit katmanda; icerik her zaman onlarin ustunde. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    /* kenar isik lekeleri: sag ust, sol alt, sag alt */
+    radial-gradient(560px 280px at 100% 0%, rgba(185, 79, 30, 0.30), rgba(113, 53, 29, 0.12) 55%, transparent 100%),
+    radial-gradient(360px 280px at 0% 100%, rgba(185, 79, 30, 0.30), rgba(113, 53, 29, 0.12) 55%, transparent 100%),
+    radial-gradient(480px 320px at 100% 100%, rgba(185, 79, 30, 0.30), rgba(113, 53, 29, 0.12) 55%, transparent 100%),
+    /* 28px yan kenar emulsiyonu, iceride 24px'te soner */
+    linear-gradient(90deg, rgba(185, 79, 30, 0.45), rgba(113, 53, 29, 0.2) 4px, transparent 28px),
+    linear-gradient(270deg, rgba(185, 79, 30, 0.45), rgba(113, 53, 29, 0.2) 4px, transparent 28px);
+}
+
+/* gren ayri katmanda, kendi opakligiyla */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: url("/assets/grain.jpg") 0 0 / 512px repeat;
+  opacity: 0.18;
+}
+
+/* sonuc ekraninda alt lekeler yari gucte */
+body:has(.dropzone.compact)::before {
+  background:
+    radial-gradient(560px 280px at 100% 0%, rgba(185, 79, 30, 0.30), rgba(113, 53, 29, 0.12) 55%, transparent 100%),
+    radial-gradient(360px 280px at 0% 100%, rgba(185, 79, 30, 0.15), rgba(113, 53, 29, 0.06) 55%, transparent 100%),
+    radial-gradient(480px 320px at 100% 100%, rgba(185, 79, 30, 0.15), rgba(113, 53, 29, 0.06) 55%, transparent 100%),
+    linear-gradient(90deg, rgba(185, 79, 30, 0.45), rgba(113, 53, 29, 0.2) 4px, transparent 28px),
+    linear-gradient(270deg, rgba(185, 79, 30, 0.45), rgba(113, 53, 29, 0.2) 4px, transparent 28px);
+}
+
+/* sayfa kenarlarindaki perforasyon seridi: 20px; ilk ziyaret/yuklemede
+   %80, sonuc ekraninda %35 (icerik kenara yakin, serit geri planda kalsin) */
 .page::before,
 .page::after {
   content: "";
   position: fixed;
   top: 0;
   bottom: 0;
-  width: 26px;
+  width: 20px;
   pointer-events: none;
   z-index: 0;
-  background: url("/assets/film-strip.webp") 0 0 / 26px auto repeat-y;
-  box-shadow: 0 0 34px 6px rgba(232, 120, 40, 0.22);
+  background: url("/assets/film-strip.webp") 0 0 / 20px auto repeat-y;
+  opacity: 0.8;
 }
 .page::before { left: 0; }
-.page::after { right: 0; }
+.page::after { right: 0; transform: scaleX(-1); }
+.page:has(.dropzone.compact):not(:has(#progress:not(.hidden)))::before,
+.page:has(.dropzone.compact):not(:has(#progress:not(.hidden)))::after { opacity: 0.35; }
 
 .visually-hidden {
   position: absolute !important;
@@ -82,45 +128,51 @@ html, body {
   white-space: nowrap;
 }
 
+/* Dis bosluk ekrana gore: sonuc 28px, ilk ziyaret 56px, yukleme 48px.
+   Icerik 1440px referans genisliginde ortalanir. */
 .page {
-  max-width: 1480px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 16px 56px 80px;
+  padding: 0 56px 80px;
   position: relative;
   z-index: 1;
   /* basliktaki isik huzmesi kenardan tasabilir; yatay kaydirma olusmasin */
   overflow-x: clip;
 }
 
+.page:has(.dropzone.compact) { padding: 0 28px 48px; }
+.page:has(#progress:not(.hidden)) { padding: 0 48px 64px; }
+
 /* ---------- Header ---------- */
 
 .top {
   position: relative;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 /* liste yuklendikten sonra tanitim cumlesine gerek yok - sonuclar yukari kaysin */
-.page:has(.dropzone.compact) .subtitle { display: none; }
-.page:has(.dropzone.compact) .top { margin-bottom: 12px; }
-.page:has(.dropzone.compact) .top-bar { margin-bottom: 0; }
+.page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) .subtitle { display: none; }
+.page:has(.dropzone.compact) .top { margin-bottom: 4px; }
 
-/* projeksiyon isigi - sag ustten sola acilan huzme */
+/* Projektor isigi (spec 1.2): sivri uc "Geri Bildirim"in solunda,
+   yelpaze sol uste acilir; yaklasik 520x130. Gecici olarak mevcut isik
+   gorseli dikey aynalanip basiklastiriliyor. */
 .top::before {
   content: "";
   position: absolute;
-  top: -150px;
-  right: -40px;
-  width: 980px;
-  height: 551px;
+  top: -82px;
+  right: 376px;
+  width: 560px;
+  height: 160px;
   pointer-events: none;
   z-index: -1;
   background: url("/assets/beam.webp") 0 0 / 100% 100% no-repeat;
-  /* huzme basligin altina tasip istatistikleri bulandirmasin */
-  -webkit-mask: linear-gradient(#000 30%, transparent 62%);
-  mask: linear-gradient(#000 30%, transparent 62%);
-  opacity: 0.3;
+  transform: scaleY(-1);
+  opacity: 0.52;
   mix-blend-mode: screen;
 }
+
+.page:has(.dropzone.compact) .top::before { opacity: 0.38; }
 
 .top-bar {
   display: flex;
@@ -128,39 +180,36 @@ html, body {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 16px;
-  margin-bottom: 10px;
+  min-height: 80px;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
+/* bilet isareti 38x56 gorunur; svg kutusu 64, isaret icinde dikey */
 .brand-mark {
   width: 64px;
   height: 64px;
-  margin: 0 -10px 0 -12px;
+  margin: 0 -12px 0 -13px;
   flex: none;
   color: var(--accent);
-  filter: drop-shadow(0 2px 10px rgba(218, 181, 109, 0.25));
 }
 
 .brand-name {
   font-family: var(--f-display);
   font-style: italic;
   font-weight: 900;
-  font-size: 66px;
-  line-height: 0.95;
-  letter-spacing: -0.035em;
+  font-size: 72px;
+  line-height: 76px;
+  letter-spacing: -2px;
   color: var(--text);
-  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5);
 }
 
 .brand-name-accent {
-  background: var(--gold-metal);
-  text-shadow: none;
-  filter: drop-shadow(0 2px 14px rgba(218, 181, 109, 0.22));
+  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -169,18 +218,19 @@ html, body {
 .top-links {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: 22px;
   flex-wrap: wrap;
 }
 
 .top-link {
   font-family: var(--f-body);
-  font-size: 13.5px;
-  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
   color: var(--text);
   text-decoration: none;
   white-space: nowrap;
-  border-bottom: 1px solid var(--text-dim);
+  border-bottom: 1px solid rgba(241, 233, 216, 0.6);
   transition: color 0.15s, border-color 0.15s;
 }
 
@@ -189,33 +239,37 @@ html, body {
 button.top-link {
   background: none;
   appearance: none;
-  padding: 0 0 1px;
+  padding: 0;
   border: none;
-  border-bottom: 1px solid var(--text-dim);
+  border-bottom: 1px solid rgba(241, 233, 216, 0.6);
   cursor: pointer;
 }
 
 .country-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
 }
 
 .country-row select {
   appearance: none;
   -webkit-appearance: none;
+  height: 36px;
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f1e9d8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
       no-repeat right 12px center,
-    rgba(12, 12, 10, 0.7);
+    var(--bg-elevated);
   color: var(--text);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 8px 36px 8px 14px;
-  font-size: 13.5px;
+  padding: 0 34px 0 14px;
+  font-size: 14px;
   font-family: var(--f-body);
   cursor: pointer;
 }
+
+#lang-select { width: 108px; }
+#country-select { width: 140px; }
 
 .country-row select:hover { border-color: var(--accent); }
 .country-row select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -232,9 +286,10 @@ button.top-link {
 .howto-box,
 .progress-panel,
 .note-box {
-  background: rgba(21, 20, 17, 0.88);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 rgba(241, 233, 216, 0.04);
 }
 
 /* ---------- Geri bildirim modali ---------- */
@@ -374,7 +429,7 @@ button.top-link {
 /* ---------- Nasil kullanilir ---------- */
 
 .howto-box {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   padding: 0;
 }
 
@@ -391,7 +446,8 @@ button.top-link {
 .howto-box summary {
   font-weight: 400;
   font-size: 16px;
-  padding: 12px 52px 12px 22px;
+  line-height: 22px;
+  padding: 8px 48px 8px 20px;
 }
 
 .howto-box summary::-webkit-details-marker,
@@ -401,12 +457,12 @@ button.top-link {
 .random-pool-panel summary::after {
   content: "";
   position: absolute;
-  right: 20px;
+  right: 16px;
   top: 50%;
-  width: 14px;
-  height: 14px;
-  margin-top: -7px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f1e9d8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f1e9d8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m9 6 6 6-6 6'/%3E%3C/svg%3E") center / contain no-repeat;
   transition: transform 0.15s ease;
 }
 
@@ -712,15 +768,18 @@ button.top-link {
 /* Liste yuklendikten sonra: ince serit, hazir liste butonlari sagda */
 .upload-bar:has(.dropzone.compact) {
   display: flex;
-  align-items: stretch;
+  align-items: center;
+  height: 52px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: rgba(21, 20, 17, 0.88);
+  background: var(--panel);
+  box-shadow: inset 0 1px 0 rgba(241, 233, 216, 0.04);
 }
 
 .dropzone.compact {
   flex: 1;
-  padding: 0 20px;
+  align-self: stretch;
+  padding: 0 18px;
   display: flex;
   align-items: center;
   text-align: left;
@@ -741,12 +800,11 @@ button.top-link {
   display: flex;
   align-items: center;
   gap: 14px;
-  min-height: 52px;
 }
 
 .dropzone.compact .dropzone-icon {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   margin: 0;
   filter: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f1e9d8' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 2.8h8.5L19 7.3v13.9H6z'/%3E%3Cpath d='M14.2 3v4.6h4.6M12.5 17.5v-7m-3 3 3-3 3 3'/%3E%3C/svg%3E");
@@ -755,7 +813,8 @@ button.top-link {
 .dropzone.compact .dropzone-text {
   font-family: var(--f-body);
   font-weight: 400;
-  font-size: 15px;
+  font-size: 16px;
+  line-height: 22px;
 }
 
 .dropzone.compact .dropzone-sub { display: none; }
@@ -809,24 +868,28 @@ button.top-link {
 .upload-bar:has(.dropzone:not(.compact)) .csv-action-btn--clear { display: none; }
 
 .upload-bar:has(.dropzone.compact) .csv-actions {
-  margin: 0;
+  margin: 0 8px 0 0;
   gap: 0;
   flex: none;
 }
 
 .upload-bar:has(.dropzone.compact) .csv-action-btn {
   min-width: 0;
-  padding: 0 22px;
+  height: 34px;
+  padding: 0 20px;
   border: none;
   border-left: 1px solid var(--border);
   border-radius: 0;
   background: transparent;
   font-size: 14px;
+  font-weight: 400;
 }
+
+.upload-bar:has(.dropzone.compact) .csv-action-btn::before { width: 18px; height: 18px; }
 
 .upload-bar:has(.dropzone.compact) .csv-action-btn:hover { background: var(--accent-soft); }
 .upload-bar:has(.dropzone.compact) .csv-action-btn--clear:hover { background: var(--danger-soft); }
-.upload-bar:has(.dropzone.compact) .csv-action-btn:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+.upload-bar:has(.dropzone.compact) .csv-action-btn:hover { border-radius: var(--radius-sm); }
 
 /* ---------- Ilerleme ---------- */
 
@@ -904,16 +967,17 @@ button.top-link {
 
 /* ---------- Istatistikler ---------- */
 
-.summary { margin-top: 16px; }
+.summary { margin-top: 10px; }
 
 .country-badge {
   font-family: var(--f-mono);
   font-size: 12px;
+  line-height: 16px;
   font-weight: 500;
-  letter-spacing: 0.14em;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   color: var(--text-dim);
-  margin-bottom: 10px;
+  margin: 0 0 6px 10px;
 }
 
 .stat-row-secondary {
@@ -921,37 +985,39 @@ button.top-link {
   grid-template-columns: repeat(8, 1fr);
 }
 
+/* sekiz esit hucre (1440'ta ~172px), 64px yukseklik, 1px dikey ayrac */
 .summary-stat-sm {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-left: 1px solid var(--border-strong);
+  gap: 2px;
+  min-height: 64px;
+  padding: 0 10px;
+  border-left: 1px solid var(--border-soft);
 }
-
-.summary-stat-sm:first-child { border-left: none; }
 
 .summary-stat-sm .num {
   font-family: var(--f-body);
   font-variant-numeric: tabular-nums;
-  font-size: 28px;
+  font-size: 26px;
+  line-height: 30px;
   font-weight: 700;
-  line-height: 1.1;
+  letter-spacing: -0.4px;
   color: var(--accent);
 }
 
-/* renkler anlam tasir: 3. = zaten sende var, 7. = eslesme kontrolu,
-   4. (izledin) ve 8. (toplam) notr */
+/* 9/99/61 altin, 34 turkuaz, 3 turuncu; izledin, hicbir yerde yok ve
+   toplam krem */
 .summary-stat-sm:nth-child(3) .num { color: var(--positive); }
 .summary-stat-sm:nth-child(7) .num { color: var(--warn); }
 .summary-stat-sm:nth-child(4) .num,
+.summary-stat-sm:nth-child(6) .num,
 .summary-stat-sm:nth-child(8) .num { color: var(--text); }
 
 .summary-stat-sm .label {
-  font-size: 14.5px;
-  line-height: 1.3;
+  font-size: 14px;
+  line-height: 18px;
   color: var(--text);
 }
 
@@ -986,13 +1052,13 @@ button.top-link {
 
 /* ---------- Sonuclar ---------- */
 
-.results { margin-top: 14px; }
+.results { margin-top: 8px; }
 
 .movie-search-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .movie-search-input {
@@ -1000,17 +1066,18 @@ button.top-link {
   width: 100%;
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f1e9d8' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='m15.5 15.5 5 5'/%3E%3C/svg%3E")
-      no-repeat 16px center / 18px,
-    rgba(21, 20, 17, 0.9);
+      no-repeat 14px center / 20px,
+    var(--bg-elevated);
   color: var(--text);
-  border: 1px solid var(--border-strong);
+  height: 40px;
+  border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 11px 16px 11px 46px;
-  font-size: 14.5px;
+  padding: 0 14px 0 44px;
+  font-size: 16px;
   font-family: var(--f-body);
 }
 
-.movie-search-input::placeholder { color: var(--text-dim); }
+.movie-search-input::placeholder { color: var(--text-faint); }
 .movie-search-input:focus { outline: none; border-color: var(--accent); }
 
 .movie-search-clear {
@@ -1034,14 +1101,15 @@ button.top-link {
 .search-group { margin-top: 32px; }
 .search-group:first-child { margin-top: 0; }
 
-/* Kumanda paneli: solda sabit bir sira listesi (platform biletleri +
-   kategori kisayollari), sagda sadece secili olanin icerigi. */
+/* Kumanda paneli (spec ekran 1): solda 312px sira listesi, sagda secili
+   olanin icerigi; iki ayri yuzey, aralarinda 4px, ikisi de kendi icinde
+   dikey kayar. */
 
 .control-shell {
   display: grid;
-  grid-template-columns: 300px 1fr;
-  height: 680px;
-  gap: 14px;
+  grid-template-columns: 312px 1fr;
+  height: 616px;
+  gap: 4px;
 }
 
 /* arama modunda sol liste gizli - icerik tum genisligi kullanir */
@@ -1049,46 +1117,56 @@ button.top-link {
 
 .control-side,
 .control-main {
-  background:
-    linear-gradient(180deg, rgba(255, 240, 210, 0.025), transparent 120px),
-    rgba(16, 15, 13, 0.95);
+  background: var(--panel);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: inset 0 1px 0 rgba(255, 240, 210, 0.05), 0 24px 50px -30px rgba(0, 0, 0, 0.9);
+  box-shadow: inset 0 1px 0 rgba(241, 233, 216, 0.04);
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-color: rgba(119, 122, 112, 0.6) #22251e;
 }
 
-.control-side { padding: 20px 16px; }
+.control-side::-webkit-scrollbar,
+.control-main::-webkit-scrollbar { width: 8px; }
+.control-side::-webkit-scrollbar-track,
+.control-main::-webkit-scrollbar-track { background: #22251e; border-radius: 4px; }
+.control-side::-webkit-scrollbar-thumb,
+.control-main::-webkit-scrollbar-thumb { background: rgba(119, 122, 112, 0.6); border-radius: 4px; }
+
+.control-side { padding: 12px 12px 12px; }
 
 .control-side-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin: 0 2px 14px 4px;
+  padding: 0 6px 8px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .control-side-title {
   font-family: var(--f-mono);
-  font-size: 12.5px;
+  font-size: 12px;
+  line-height: 16px;
   font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.16em;
+  letter-spacing: 1.5px;
   color: var(--text);
 }
 
 .control-side-header-btns {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 18px;
 }
 
+/* gorunen 28px, tiklama hedefi 32px */
 .random-trigger-btn {
+  position: relative;
   flex: none;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: 1.5px solid var(--text);
   background: center / 16px no-repeat;
@@ -1098,12 +1176,14 @@ button.top-link {
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
+.random-trigger-btn::after { content: ""; position: absolute; inset: -3px; }
+
 .random-trigger-btn--add {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f1e9d8' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E");
 }
 
 .random-trigger-btn--dice {
-  border-radius: 9px;
+  border-radius: 7px;
   background-size: 18px;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23f1e9d8'%3E%3Ccircle cx='7' cy='7' r='2'/%3E%3Ccircle cx='17' cy='7' r='2'/%3E%3Ccircle cx='12' cy='12' r='2'/%3E%3Ccircle cx='7' cy='17' r='2'/%3E%3Ccircle cx='17' cy='17' r='2'/%3E%3C/svg%3E");
 }
@@ -1113,47 +1193,50 @@ button.top-link {
   background-color: var(--accent-soft);
 }
 
-/* --- Platform bileti ---
+/* --- Platform bileti (spec 2.1) ---
    DOM: .hticket > (.hticket-top > sira|rozet, sayi) + .hticket-perf +
    (.hticket-bottom > kutu, isim). Ic sarmalayicilar display:contents ile
    acilip parcalar tek bir grid'e yerlestiriliyor:
-   [sira | isim / sayi | kutu] */
+   [sira 68px | isim / film sayisi | sahiplik kutusu] */
 .hticket {
   --stub: var(--gold-metal);
+  --num-col: 68px;
   position: relative;
   display: grid;
-  grid-template-columns: 70px 1fr auto;
+  grid-template-columns: var(--num-col) 1fr auto;
   grid-template-areas:
     "num name check"
     "num count check";
+  align-content: center;
   align-items: center;
-  column-gap: 14px;
-  min-height: 76px;
-  margin-bottom: 10px;
-  padding: 11px 16px 11px 0;
-  border-radius: 8px;
+  column-gap: 18px;
+  row-gap: 4px;
+  min-height: 68px;
+  margin-bottom: 8px;
+  padding: 11px 18px 11px 0;
+  border-radius: 7px;
   cursor: pointer;
-  background:
-    linear-gradient(90deg, rgba(218, 181, 109, 0.06), transparent 40%),
-    var(--bg-elevated);
-  border: 1px solid var(--border-strong);
-  /* koparma tarafindaki yarim daire centikler */
-  -webkit-mask: radial-gradient(circle 8px at 0 50%, transparent 98%, #000);
-  mask: radial-gradient(circle 8px at 0 50%, transparent 98%, #000);
-  box-shadow: inset 0 1px 0 rgba(255, 240, 210, 0.04), 0 10px 22px -16px rgba(0, 0, 0, 0.9);
+  background: linear-gradient(90deg, #2a2922, var(--bg-elevated) 60%);
+  border: 1px solid var(--border);
+  /* solda 8px, sagda 5px icbukey yarim daire; arka yuzey gorunur */
+  -webkit-mask:
+    radial-gradient(circle 8px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 5px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  mask:
+    radial-gradient(circle 8px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat,
+    radial-gradient(circle 5px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-/* altin bilet koku (sol serit) */
+/* 12px altin kupon seridi */
 .hticket::before {
   content: "";
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  width: 13px;
+  width: 12px;
   background: var(--stub);
-  box-shadow: inset -2px 0 3px rgba(0, 0, 0, 0.35);
 }
 
 .hticket-top,
@@ -1162,38 +1245,45 @@ button.top-link {
 .hticket-order {
   grid-area: num;
   justify-self: center;
+  padding-left: 12px;
   font-family: var(--f-body);
-  font-size: 25px;
+  font-size: 24px;
+  line-height: 28px;
   font-weight: 600;
-  color: var(--accent-bright);
-  padding-left: 13px;
+  letter-spacing: -0.6px;
+  color: var(--accent);
 }
 
 .hticket-owned-badge {
   grid-area: num;
   justify-self: center;
-  padding-left: 13px;
+  padding-left: 12px;
   font-family: var(--f-mono);
   font-size: 10px;
+  line-height: 14px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--positive);
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  color: var(--positive-bright);
 }
 
-/* sira ile isim arasindaki dikey koparma cizgisi */
+/* sira ile isim arasindaki perforasyon: 2px cizgi / 3px bosluk */
 .hticket-perf {
   position: absolute;
-  left: 70px;
+  left: var(--num-col);
   top: 14px;
   bottom: 14px;
-  border-left: 1px solid rgba(218, 181, 109, 0.3);
+  width: 1px;
+  background: repeating-linear-gradient(to bottom, rgba(103, 99, 79, 0.55) 0 2px, transparent 2px 5px);
 }
 
 .hticket .platform-count {
   grid-area: count;
+  align-self: start;
   font-family: var(--f-body);
-  font-size: 13.5px;
+  font-size: 14px;
+  line-height: 18px;
   color: var(--text-dim);
 }
 
@@ -1201,9 +1291,10 @@ button.top-link {
   grid-area: name;
   align-self: end;
   font-family: var(--f-body);
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.12;
+  font-size: 21px;
+  line-height: 23px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
   color: var(--text);
 }
 
@@ -1212,12 +1303,12 @@ button.top-link {
   appearance: none;
   -webkit-appearance: none;
   margin: 0;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   flex: none;
   position: relative;
   border: 1.5px solid var(--text-dim);
-  border-radius: 5px;
+  border-radius: 4px;
   background: transparent;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
@@ -1226,57 +1317,58 @@ button.top-link {
 .hticket-owned-check:hover { border-color: var(--text); }
 
 .hticket-owned-check:checked {
-  background: var(--positive);
-  border-color: var(--positive);
+  background: var(--positive-bright);
+  border-color: var(--positive-bright);
 }
 
 .hticket-owned-check:checked::after {
   content: "";
   position: absolute;
-  left: 6.5px;
-  top: 2.5px;
+  left: 5.5px;
+  top: 1.5px;
   width: 5px;
   height: 10px;
-  border: solid var(--bg);
+  border: solid var(--positive-dark);
   border-width: 0 2.4px 2.4px 0;
   transform: rotate(43deg);
 }
 
-.hticket:hover { border-color: #6d6249; }
+.hticket:hover {
+  border-color: var(--border-strong);
+  background: linear-gradient(90deg, #302f27, #272722 60%);
+}
 
+/* aktif bilet: 2px altin sinir, koyu sicak taban */
 .hticket.active {
-  border-color: var(--accent);
-  border-width: 1.5px;
-  background:
-    linear-gradient(180deg, rgba(255, 230, 170, 0.05), transparent 50%),
-    linear-gradient(90deg, rgba(218, 181, 109, 0.16), rgba(150, 105, 45, 0.08) 70%),
-    var(--bg-elevated);
-  box-shadow: inset 0 1px 0 rgba(255, 230, 170, 0.18), 0 0 26px -8px rgba(218, 181, 109, 0.7);
+  border: 2px solid var(--accent);
+  padding: 10px 17px 10px 0;
+  background: #2b281e;
+  box-shadow: inset 0 0 16px rgba(218, 181, 109, 0.08);
 }
 
-/* sahip olunan bilet: turkuaz ton, yeri degismez */
+.hticket.active .hticket-perf { top: 13px; bottom: 13px; }
+
+/* sahip olunan bilet: turkuaz serit ve govde; sira yerine SAHIBIM,
+   yeri degismez */
 .hticket:has(.hticket-owned-check:checked) {
-  --stub: linear-gradient(180deg, #a9dccf, #79b7a8 50%, #5c9a8b 55%, #79b7a8);
-  border-color: rgba(121, 183, 168, 0.8);
-  background:
-    linear-gradient(180deg, rgba(210, 255, 240, 0.08), transparent 50%),
-    linear-gradient(90deg, rgba(68, 140, 126, 0.85), rgba(52, 112, 101, 0.75) 75%);
+  --stub: var(--positive);
+  --num-col: 74px;
+  border-color: #5d9c8d;
+  background: linear-gradient(90deg, #254b44, var(--positive-dark));
 }
 
-.hticket:has(.hticket-owned-check:checked) .hticket-perf { border-color: rgba(121, 183, 168, 0.55); }
-.hticket:has(.hticket-owned-check:checked) .hticket-owned-badge { color: #d6f1e9; }
-.hticket:has(.hticket-owned-check:checked) .platform-count { color: rgba(241, 233, 216, 0.75); }
-.hticket-owned-check:checked { background: #a6e3d4; border-color: #a6e3d4; }
+.side-divider { height: 1px; background: var(--border-soft); margin: 8px 0 14px; }
 
-.side-divider { height: 1px; background: var(--border-strong); margin: 12px 4px 16px; }
-
+/* kategori kisayollari: 22px satir, 6px aralik */
 .side-link {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  padding: 7px 10px;
-  border-radius: var(--radius-sm);
-  font-size: 14.5px;
+  padding: 3px 6px;
+  margin-bottom: 0;
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 22px;
   color: var(--text);
   cursor: pointer;
 }
@@ -1292,79 +1384,78 @@ button.top-link {
 .side-link--already.active { background: var(--positive-soft); }
 .side-link--already.active b { color: var(--positive); }
 
-.control-main { padding: 24px 26px; }
+.control-main { padding: 6px 18px 18px; }
 
 .control-main-sub {
   color: var(--text);
   font-size: 16px;
+  line-height: 22px;
   margin: 2px 0 0;
 }
 
+/* tam sayfada 7 kolon: 130px poster, 18px yatay / 16px dikey aralik */
 .control-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 22px 18px;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 16px 18px;
 }
 
 .cat-positive { color: var(--positive); }
-.cat-warn { color: var(--accent); }
+.cat-warn { color: var(--text); }
 .cat-dim { color: var(--text); }
 
-/* panel basligi: rozet + buyuk italik isim + sayi, altinda ince cizgi */
-.panel > .platform-header,
-.panel > .control-main-sub:first-of-type {
-  position: relative;
-}
-
+/* panel basligi satiri: 52px; rozet + italik isim + film sayisi */
 .platform-header {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-bottom: 4px;
+  gap: 16px;
+  min-height: 52px;
 }
 
-.panel > .platform-header + .platform-bar,
-.panel > .platform-header + .control-main-sub,
-.search-group > .platform-header {
-  margin-top: 0;
-}
-
-/* basligin altindaki cizgi: platform panelinde .platform-bar, kategori
-   panellerinde alt baslik (.control-main-sub) altinda */
 .platform-bar {
   height: 1px;
-  margin: 14px 0 22px;
-  background: var(--border-strong) !important;
+  margin: 4px 0 10px;
+  background: var(--border-soft) !important;
+}
+
+/* kategori panelleri: 36/42 baslik, 16/22 alt baslik, altinda ince
+   cizgi; ilk poster 20px sonra */
+.panel > .platform-header .platform-name.cat-positive,
+.panel > .platform-header .platform-name.cat-warn,
+.panel > .platform-header .platform-name.cat-dim {
+  font-size: 36px;
+  line-height: 42px;
+  font-weight: 800;
+  letter-spacing: -0.7px;
 }
 
 .panel > .control-main-sub {
-  padding-bottom: 14px;
-  margin-bottom: 22px;
-  border-bottom: 1px solid var(--border-strong);
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid rgba(218, 181, 109, 0.65);
 }
 
-.panel:has(.cat-positive) > .control-main-sub { border-color: rgba(121, 183, 168, 0.6); }
-.panel:has(.cat-warn) > .control-main-sub,
-.panel:has(.cat-dim) > .control-main-sub { border-color: rgba(218, 181, 109, 0.55); }
+.panel:has(.cat-positive) > .control-main-sub { border-color: rgba(121, 183, 168, 0.65); }
 
 .search-group > .platform-header {
-  padding-bottom: 12px;
-  margin-bottom: 18px;
-  border-bottom: 1px solid var(--border-strong);
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .platform-month {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 18px;
   font-family: var(--f-mono);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--accent-bright);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border: 1.5px solid var(--accent);
-  background: rgba(218, 181, 109, 0.06);
-  box-shadow: inset 0 1px 0 rgba(255, 230, 170, 0.15);
-  padding: 6px 18px;
+  letter-spacing: 1.5px;
+  border: 1px solid var(--accent);
   border-radius: 999px;
 }
 
@@ -1373,15 +1464,16 @@ button.top-link {
 .platform-name {
   font-family: var(--f-display);
   font-style: italic;
-  font-size: 52px;
+  font-size: 48px;
+  line-height: 52px;
   font-weight: 900;
-  line-height: 1;
-  letter-spacing: -0.03em;
+  letter-spacing: -1.4px;
 }
 
 .platform-count {
   font-family: var(--f-body);
-  font-size: 19px;
+  font-size: 18px;
+  line-height: 24px;
   color: var(--text);
 }
 
@@ -1399,7 +1491,7 @@ button.top-link {
   position: relative;
   width: 100%;
   aspect-ratio: 2 / 3;
-  border-radius: 6px;
+  border-radius: 4px;
   background-size: cover;
   background-position: center;
   background-color: var(--bg-elevated);
@@ -1411,31 +1503,32 @@ button.top-link {
   font-size: 36px;
   font-weight: 700;
   color: var(--text-faint);
-  border: 1px solid var(--border-strong);
+  border: 1px solid #6b6a5d;
   overflow: hidden;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .movie-poster::after {
   content: "";
   position: absolute;
   inset: 0;
-  box-shadow: inset 0 -40px 30px -30px rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 -30px 24px -24px rgba(0, 0, 0, 0.45);
   pointer-events: none;
 }
 
 .movie-card:hover .movie-poster {
   border-color: var(--accent);
-  box-shadow: 0 10px 26px -10px rgba(218, 181, 109, 0.5);
-  transform: translateY(-3px);
+  box-shadow: 0 8px 22px -12px rgba(218, 181, 109, 0.45);
 }
 
+/* poster kontrolleri (spec 2.2): 28px koyu disk, 1px krem %65 kenar,
+   16px ikon, kenardan 6px; tiklama hedefi 32px */
 .watched-toggle,
 .remove-toggle,
 .review-toggle {
   position: absolute;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   padding: 0;
   z-index: 1;
@@ -1444,15 +1537,19 @@ button.top-link {
   justify-content: center;
   font-size: 0;
   cursor: pointer;
-  background: center / 16px no-repeat, rgba(12, 12, 10, 0.78);
-  border: 1.5px solid rgba(241, 233, 216, 0.85);
+  background: center / 16px no-repeat, rgba(16, 17, 15, 0.88);
+  border: 1px solid rgba(241, 233, 216, 0.65);
   transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 }
 
+.watched-toggle::after,
+.remove-toggle::after,
+.review-toggle::after { content: ""; position: absolute; inset: -2px; }
+
 .watched-toggle {
-  top: 8px;
-  right: 8px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f1e9d8' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+  top: 6px;
+  right: 6px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f1e9d8' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E");
 }
 
 .watched-toggle:hover {
@@ -1461,10 +1558,9 @@ button.top-link {
 }
 
 .remove-toggle {
-  bottom: 8px;
-  right: 8px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f1e9d8' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='m6.5 6.5 11 11m0-11-11 11'/%3E%3C/svg%3E");
-  background-size: 14px;
+  bottom: 6px;
+  right: 6px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f1e9d8' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='m6.5 6.5 11 11m0-11-11 11'/%3E%3C/svg%3E");
 }
 
 .remove-toggle:hover {
@@ -1472,24 +1568,27 @@ button.top-link {
   border-color: var(--danger);
 }
 
-/* eslesme kontrolu: turuncu ucgen rozet */
+/* eslesme kontrolu: 28px hedef icinde 22px turuncu ucgen */
 .review-toggle {
-  top: 8px;
-  left: 8px;
-  border-radius: 6px;
+  top: 6px;
+  left: 6px;
+  border-radius: 4px;
   border: none;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ef8755' stroke='%23ef8755' stroke-width='1.5' stroke-linejoin='round' d='M12 2.8 1.8 20.6h20.4z'/%3E%3Cpath stroke='%23fff' stroke-width='2.4' stroke-linecap='round' d='M12 9v5.5M12 17.6v.1'/%3E%3C/svg%3E") center / 28px no-repeat;
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6));
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ef8755' stroke='%23ef8755' stroke-width='1.5' stroke-linejoin='round' d='M12 2.8 1.8 20.6h20.4z'/%3E%3Cpath stroke='%23f1e9d8' stroke-width='2.4' stroke-linecap='round' d='M12 9v5.5M12 17.6v.1'/%3E%3C/svg%3E") center / 22px no-repeat;
+  filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.6));
 }
 
 .review-toggle:hover { transform: scale(1.1); }
 
+/* poster alti: 6px bosluk, ad 16/19 (en fazla 2 satir), yil 13/17,
+   yardimci satirdan once 3px */
 .movie-title {
   font-family: var(--f-body);
   font-size: 16px;
-  font-weight: 700;
-  margin-top: 10px;
-  line-height: 1.25;
+  line-height: 19px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  margin-top: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -1498,18 +1597,17 @@ button.top-link {
 
 .movie-year {
   font-family: var(--f-body);
-  font-size: 14px;
-  color: var(--text);
-  opacity: 0.85;
-  margin-top: 2px;
+  font-size: 13px;
+  line-height: 17px;
+  color: var(--text-dim);
 }
 
 .movie-also-on {
   font-family: var(--f-body);
   font-size: 12px;
+  line-height: 16px;
   color: var(--text-dim);
-  margin-top: 5px;
-  line-height: 1.35;
+  margin-top: 3px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -1519,72 +1617,84 @@ button.top-link {
 .movie-review-note {
   color: var(--warn);
   font-weight: 600;
+  line-height: 15px;
 }
 
-/* ---------- Kirala / Satin al ---------- */
+/* ---------- Kirala / Satin al (spec 5) ---------- */
 
+/* 1-2 notr etiket: ustte saglayici, altta islem ve fiyat; uyari
+   turuncusundan bilerek ayri */
 .rentbuy-prices {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .rentbuy-chip {
-  display: block;
-  font-family: var(--f-body);
-  font-size: 11px;
-  font-weight: 500;
-  padding: 6px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(241, 233, 216, 0.45);
-  background: rgba(12, 12, 10, 0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 48px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-elevated);
   color: var(--text);
   text-decoration: none;
-  line-height: 1.35;
+  font-family: var(--f-body);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.rentbuy-provider {
+  font-weight: 500;
+  line-height: 17px;
 }
 
 .rentbuy-chip:hover {
   border-color: var(--accent);
-  background: var(--accent-soft);
+  background: var(--bg-raised);
 }
 
-/* ---------- Hicbir yerde yok ---------- */
+/* ---------- Hicbir yerde yok (spec 6) ---------- */
 
 .nowhere-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .nowhere-chip {
   display: inline-flex;
-  align-items: baseline;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 12px;
   font-family: var(--f-body);
   font-size: 15px;
+  line-height: 20px;
   font-weight: 600;
   color: var(--text);
-  background: rgba(12, 12, 10, 0.55);
-  border: 1px solid var(--border-strong);
-  border-radius: 6px;
-  padding: 9px 16px;
+  background: #20211c;
+  border: 1px solid #58594b;
+  border-radius: 8px;
 }
 
 .nowhere-chip .yr {
   font-family: var(--f-body);
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 18px;
   font-weight: 400;
   color: var(--text-dim);
 }
 
 .nowhere-chip.needs-review {
-  border-color: var(--warn);
-  background: var(--warn-soft);
+  border-color: rgba(239, 135, 85, 0.75);
   cursor: pointer;
 }
 
-.nowhere-chip.needs-review:hover { background: rgba(239, 135, 85, 0.24); }
+.nowhere-chip.needs-review:hover { background: var(--warn-dark); }
 
 /* ---------- Modallar ---------- */
 
@@ -1870,7 +1980,7 @@ button.top-link {
 
 /* ---------- Alt notlar ---------- */
 
-.footer-notes { margin-top: 14px; }
+.footer-notes { margin-top: 12px; }
 
 .note-box {
   padding: 0;
@@ -1885,10 +1995,11 @@ button.top-link {
   cursor: pointer;
   list-style: none;
   position: relative;
-  padding: 13px 52px 13px 22px;
+  padding: 9px 48px 9px 20px;
   font-family: var(--f-body);
   font-size: 16px;
-  font-weight: 600;
+  line-height: 22px;
+  font-weight: 400;
   color: var(--text);
 }
 

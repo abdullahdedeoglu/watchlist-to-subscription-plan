@@ -1710,7 +1710,12 @@ function rentBuyCard(movie) {
     link.target = "_blank";
     link.rel = "noopener";
     const typeLabel = t(offer.type === "RENT" ? "rentLabel" : "buyLabel");
-    link.textContent = offer.price ? `${offer.platform} ${typeLabel} · ${offer.price}` : `${offer.platform} ${typeLabel}`;
+    const provider = document.createElement("span");
+    provider.className = "rentbuy-provider";
+    provider.textContent = offer.platform;
+    const deal = document.createElement("span");
+    deal.textContent = offer.price ? `${typeLabel} · ${offer.price}` : typeLabel;
+    link.append(provider, deal);
     prices.appendChild(link);
   }
   card.appendChild(prices);
