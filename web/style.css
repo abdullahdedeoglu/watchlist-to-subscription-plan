@@ -203,7 +203,7 @@ body::after {
 .page:has(#progress:not(.hidden)) .top { padding-top: 32px; }
 .page:has(#progress:not(.hidden)) .top-bar { min-height: 92px; }
 .page:not(:has(.dropzone.compact)) .brand-mark,
-.page:has(#progress:not(.hidden)) .brand-mark { width: 72px; height: 72px; margin: 0 -14px 0 -15px; }
+.page:has(#progress:not(.hidden)) .brand-mark { height: 66px; }
 .page:not(:has(.dropzone.compact)) .brand-name { width: 347px; }
 .page:has(#progress:not(.hidden)) .brand-name { width: 380px; }
 
@@ -214,12 +214,14 @@ body::after {
 }
 
 /* bilet isareti 38x56 gorunur; svg kutusu 64, isaret icinde dikey */
+/* bilet + tik isareti: GPT'nin cizdigi gorsel; yukseklik cizimden (sonuc 60,
+   ilk ziyaret/arama 66), genislik oranindan */
 .brand-mark {
-  width: 64px;
-  height: 64px;
-  margin: 0 -12px 0 -13px;
+  display: block;
+  width: auto;
+  height: 60px;
   flex: none;
-  color: var(--accent);
+  margin-right: 2px;
 }
 
 /* "WatchPlan" yazisi GPT'nin cizdigi gorsel (cizimdeki harflerin aynisi);
@@ -2336,7 +2338,9 @@ button.top-link {
   .brand-name,
   .page:not(:has(.dropzone.compact)) .brand-name,
   .page:has(#progress:not(.hidden)) .brand-name { width: 260px; }
-  .brand-mark { width: 52px; height: 52px; }
+  .brand-mark,
+  .page:not(:has(.dropzone.compact)) .brand-mark,
+  .page:has(#progress:not(.hidden)) .brand-mark { height: 50px; }
   .howto-content { grid-template-columns: 1fr; row-gap: 20px; }
   .howto-steps { padding-right: 0; }
   .howto-video-card { width: auto; max-width: 420px; padding-left: 0; border-left: none; }
@@ -2440,7 +2444,7 @@ button.top-link {
   .page:has(#progress:not(.hidden)) .brand-name { width: 204px; margin-left: 2px; }
   .brand-mark,
   .page:not(:has(.dropzone.compact)) .brand-mark,
-  .page:has(#progress:not(.hidden)) .brand-mark { width: 44px; height: 44px; margin: 0 -8px 0 -9px; }
+  .page:has(#progress:not(.hidden)) .brand-mark { height: 40px; margin-right: 0; }
   /* marka ve "Geri Bildirim" ayni satirda, dil/ulke secimi altta sagda */
   .top-links { display: contents; }
   .top-link { font-size: 11px; line-height: 16px; }
