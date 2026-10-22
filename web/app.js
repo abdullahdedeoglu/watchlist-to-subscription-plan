@@ -115,7 +115,7 @@ const I18N = {
     rematchSearchBtn: "Ara",
     randomModalTitle: "Rastgele Film",
     sidebarTitle: "Abonelik Sırası",
-    ownedBadge: "Sahipsin",
+    ownedBadge: "Sahibim",
     ownedCheckTitle: "Bu platforma zaten sahipsen işaretle",
     statPlatformCount: "Platform",
     statNewMovies: "Yeni Abonelikle Film",
