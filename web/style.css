@@ -10,7 +10,8 @@
 
 /* Renkler, olculer ve katmanlar tasarim/gpt-tasarim-spec.md'den. */
 :root {
-  --bg: #181815;            /* sayfa zemini */
+  --bg: #0d0e0c;            /* sayfa zemini: cizimden olculdu (spec #181815'ten koyu) */
+  --bar: #1a1c18;           /* nasil kullanilir / upload seridi / alt notlar: cizimden */
   --panel: #141612;         /* sakin ana panel (poster ve yogun metin arkasi) */
   --bg-elevated: #22221e;   /* kart / form yuzeyi */
   --bg-raised: #292923;     /* hover, fiyat etiketi */
@@ -69,6 +70,7 @@ body::before {
   inset: 0;
   pointer-events: none;
   z-index: 0;
+  opacity: 0.5;
   background:
     /* kenar isik lekeleri: sag ust, sol alt, sag alt */
     radial-gradient(560px 280px at 100% 0%, rgba(185, 79, 30, 0.30), rgba(113, 53, 29, 0.12) 55%, transparent 100%),
@@ -99,7 +101,7 @@ body::after {
   pointer-events: none;
   z-index: 0;
   background: url("/assets/grain.jpg") 0 0 / 512px repeat;
-  opacity: 0.18;
+  opacity: 0.16;
 }
 
 /* sonuc ekraninda alt lekeler yari gucte */
@@ -197,6 +199,7 @@ body:has(.dropzone.compact)::before {
   flex-wrap: wrap;
   gap: 16px;
   min-height: 80px;
+  padding: 0 18px;
 }
 
 /* ilk ziyaret: baslik 24px asagida, 90px; yukleme: 32px asagida, 92px.
@@ -229,9 +232,9 @@ body:has(.dropzone.compact)::before {
   font-family: var(--f-display);
   font-style: italic;
   font-weight: 900;
-  font-size: 72px;
+  font-size: 76px;
   line-height: 76px;
-  letter-spacing: -2px;
+  letter-spacing: -2.4px;
   color: var(--text);
 }
 
@@ -245,7 +248,7 @@ body:has(.dropzone.compact)::before {
 .top-links {
   display: flex;
   align-items: center;
-  gap: 22px;
+  gap: 28px;
   flex-wrap: wrap;
 }
 
@@ -275,7 +278,7 @@ button.top-link {
 .country-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 22px;
 }
 
 .country-row select {
@@ -317,7 +320,7 @@ button.top-link {
 .howto-box,
 .progress-panel,
 .note-box {
-  background: var(--panel);
+  background: var(--bar);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: inset 0 1px 0 rgba(241, 233, 216, 0.04);
@@ -846,7 +849,7 @@ button.top-link {
   height: 52px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--panel);
+  background: var(--bar);
   box-shadow: inset 0 1px 0 rgba(241, 233, 216, 0.04);
 }
 
@@ -1202,7 +1205,7 @@ button.top-link {
   background:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f1e9d8' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='m15.5 15.5 5 5'/%3E%3C/svg%3E")
       no-repeat 14px center / 20px,
-    var(--bg-elevated);
+    #1c1c1a;
   color: var(--text);
   height: 40px;
   border: 1px solid var(--border);
@@ -1256,9 +1259,12 @@ button.top-link {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: inset 0 1px 0 rgba(241, 233, 216, 0.04);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(119, 122, 112, 0.6) #22251e;
+  overflow-y: scroll;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .control-side,
+  .control-main { scrollbar-width: thin; scrollbar-color: rgba(119, 122, 112, 0.6) #22251e; }
 }
 
 .control-side::-webkit-scrollbar,
@@ -1276,7 +1282,7 @@ button.top-link {
   justify-content: space-between;
   gap: 8px;
   padding: 0 6px 8px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   border-bottom: 1px solid var(--border-soft);
 }
 
@@ -1379,8 +1385,8 @@ button.top-link {
 
 .hticket-order {
   grid-area: num;
-  justify-self: center;
-  padding-left: 12px;
+  justify-self: start;
+  padding-left: 26px;
   font-family: var(--f-body);
   font-size: 24px;
   line-height: 28px;
@@ -1426,10 +1432,10 @@ button.top-link {
   grid-area: name;
   align-self: end;
   font-family: var(--f-body);
-  font-size: 21px;
-  line-height: 23px;
+  font-size: 19px;
+  line-height: 22px;
   font-weight: 600;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.3px;
   color: var(--text);
 }
 
@@ -1492,7 +1498,7 @@ button.top-link {
   background: linear-gradient(90deg, #254b44, var(--positive-dark));
 }
 
-.side-divider { height: 1px; background: var(--border-soft); margin: 8px 0 14px; }
+.side-divider { height: 1px; background: var(--border-soft); margin: 2px 0 15px; }
 
 /* kategori kisayollari: 22px satir, 6px aralik */
 .side-link {
@@ -1503,7 +1509,7 @@ button.top-link {
   margin-bottom: 0;
   border-radius: 4px;
   font-size: 15px;
-  line-height: 22px;
+  line-height: 23px;
   color: var(--text);
   cursor: pointer;
 }
@@ -1532,7 +1538,7 @@ button.top-link {
 .control-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 16px 18px;
+  gap: 10px 18px;
 }
 
 .cat-positive { color: var(--positive); }
@@ -1604,10 +1610,10 @@ button.top-link {
 .platform-name {
   font-family: var(--f-display);
   font-style: italic;
-  font-size: 48px;
+  font-size: 58px;
   line-height: 52px;
   font-weight: 900;
-  letter-spacing: -1.4px;
+  letter-spacing: -1px;
 }
 
 .platform-count {
@@ -1616,6 +1622,8 @@ button.top-link {
   line-height: 24px;
   color: var(--text);
 }
+
+.control-main .platform-name + .platform-count { margin: 8px 0 0 -6px; }
 
 /* ---------- Film kartlari ---------- */
 
@@ -1630,7 +1638,7 @@ button.top-link {
 .movie-poster {
   position: relative;
   width: 100%;
-  aspect-ratio: 2 / 3;
+  aspect-ratio: 130 / 178;
   border-radius: 4px;
   background-size: cover;
   background-position: center;
@@ -1720,15 +1728,15 @@ button.top-link {
 
 .review-toggle:hover { transform: scale(1.1); }
 
-/* poster alti: 6px bosluk, ad 16/19 (en fazla 2 satir), yil 13/17,
-   yardimci satirdan once 3px */
+/* poster alti (cizimden olculdu): ad posterin 4px altinda 16/18 (en fazla
+   2 satir), yil 13/16, yardimci satir 11/14 */
 .movie-title {
   font-family: var(--f-body);
   font-size: 16px;
-  line-height: 19px;
+  line-height: 18px;
   font-weight: 600;
   letter-spacing: -0.1px;
-  margin-top: 6px;
+  margin-top: 4px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -1738,14 +1746,15 @@ button.top-link {
 .movie-year {
   font-family: var(--f-body);
   font-size: 13px;
-  line-height: 17px;
+  line-height: 16px;
   color: var(--text-dim);
 }
 
 .movie-also-on {
   font-family: var(--f-body);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: -0.1px;
   color: var(--text-dim);
   margin-top: 3px;
   display: -webkit-box;
@@ -2197,6 +2206,7 @@ button.top-link {
 
 @media (max-width: 900px) {
   .page { padding: 22px 20px 60px; }
+  .top-bar { padding: 0; }
   .page::before,
   .page::after { display: none; }
   .top::before { top: -60px; right: 8px; width: 300px; height: 80px; opacity: 0.14; }
