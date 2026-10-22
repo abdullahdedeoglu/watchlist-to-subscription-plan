@@ -1656,13 +1656,27 @@ button.top-link {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.movie-poster::after {
+/* Poster renk ayari: cizimdeki posterler ayni sicak/turkuaz palette
+   ciziliydi; gercek posterleri o uyuma hafifce yaklastiran ince bir
+   katman. Filtre arka plandaki gorsele uygulanir (backdrop-filter), poster
+   ustundeki dugmeler etkilenmez. */
+.movie-poster::after,
+.candidate-poster::after,
+.random-poster::after {
   content: "";
   position: absolute;
   inset: 0;
-  box-shadow: inset 0 -30px 24px -24px rgba(0, 0, 0, 0.45);
+  border-radius: inherit;
   pointer-events: none;
+  background: rgba(214, 160, 92, 0.07);
+  -webkit-backdrop-filter: saturate(0.82) sepia(0.16) contrast(1.05) brightness(0.96);
+  backdrop-filter: saturate(0.82) sepia(0.16) contrast(1.05) brightness(0.96);
 }
+
+.movie-poster::after { box-shadow: inset 0 -30px 24px -24px rgba(0, 0, 0, 0.45); }
+
+.candidate-poster,
+.random-poster { position: relative; overflow: hidden; }
 
 .movie-card:hover .movie-poster {
   border-color: var(--accent);
