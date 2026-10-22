@@ -211,6 +211,7 @@ STATIC_FILES = {
     "/assets/film-strip.webp": ("assets/film-strip.webp", "image/webp"),
     "/assets/ticket-frame-v3.webp": ("assets/ticket-frame-v3.webp", "image/webp"),
     "/assets/modal-edge.webp": ("assets/modal-edge.webp", "image/webp"),
+    "/assets/modal-edge-right.webp": ("assets/modal-edge-right.webp", "image/webp"),
     "/assets/video-cover.jpg": ("assets/video-cover.jpg", "image/jpeg"),
     "/presets/imdb-top-250.csv": ("presets/imdb-top-250.csv", "text/csv; charset=utf-8"),
     "/presets/letterboxd-top-500.csv": ("presets/letterboxd-top-500.csv", "text/csv; charset=utf-8"),
