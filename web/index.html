@@ -52,11 +52,11 @@
     <summary data-i18n="howtoSummary">Nasıl Kullanılır?</summary>
     <div class="howto-content">
       <ol class="howto-steps">
-        <li data-i18n-html="howtoStep1">Letterboxd'da <strong>Profil &rarr; Watchlist &rarr; Export watchlist</strong> yoluna git &mdash; bir <code>.csv</code> dosyası doğrudan iner (zip yok).</li>
-        <li data-i18n-html="howtoStep3">O CSV dosyasını aşağıdaki alana sürükle-bırak (ya da alana tıkla ve dosyayı seç).</li>
-        <li data-i18n-html="howtoStep4">Üst taraftan ülkeni seç &mdash; varsayılan Türkiye. JustWatch'ta o ülkedeki abonelik seçenekleri aranır, biraz sürebilir.</li>
-        <li data-i18n-html="howtoStep5">Arama bitince, hangi sırayla hangi platforma abone olursan watchlist'ini en hızlı bitireceğini görürsün.</li>
-        <li data-i18n-html="howtoStep6">Poster'in sağ üstündeki <strong>&check;</strong> izledim işaretler, sol üstteki sarı <strong>&#9888;</strong> ise eşleşmeyi kontrol etmeni önerir.</li>
+        <li data-i18n-html="howtoStep1">Letterboxd'da <strong>Profil &rarr; Watchlist &rarr; Export watchlist</strong> yoluna git, bir <code>.csv</code> dosyası doğrudan iner.</li>
+        <li data-i18n-html="howtoStep3">O CSV dosyasını aşağıdaki alana sürükle-bırak (ya da tıkla ve seç).</li>
+        <li data-i18n-html="howtoStep4">Üst taraftan ülkeni seç (varsayılan Türkiye).</li>
+        <li data-i18n-html="howtoStep5">Arama bitince hangi sırayla hangi platforma abone olacağını görürsün.</li>
+        <li data-i18n-html="howtoStep6">Poster'in sağ üstündeki <strong>&check;</strong> izledim işaretler, sol üstteki <strong>&#9888;</strong> eşleşmeyi kontrol etmeni önerir.</li>
       </ol>
       <div class="howto-video-card">
         <div class="howto-video-card-label" data-i18n="howtoStep2">1. adımı video olarak izle (56 sn)</div>
@@ -98,8 +98,11 @@
 
   <section id="progress" class="progress-panel hidden">
     <div class="progress-title" data-i18n="progressTitle">JustWatch'ta Aranıyor&hellip;</div>
-    <div class="progress-bar-track">
-      <div id="progress-bar-fill" class="progress-bar-fill"></div>
+    <div class="progress-bar-row">
+      <div class="progress-bar-track">
+        <div id="progress-bar-fill" class="progress-bar-fill"></div>
+      </div>
+      <span id="progress-percent" class="progress-percent"></span>
     </div>
     <div id="progress-detail" class="progress-detail">&nbsp;</div>
   </section>

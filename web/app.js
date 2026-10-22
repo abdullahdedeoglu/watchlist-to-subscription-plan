@@ -5,6 +5,7 @@ const countrySelect = document.getElementById("country-select");
 const progressPanel = document.getElementById("progress");
 const progressFill = document.getElementById("progress-bar-fill");
 const progressDetail = document.getElementById("progress-detail");
+const progressPercent = document.getElementById("progress-percent");
 const summaryEl = document.getElementById("summary");
 const resultsEl = document.getElementById("results");
 const controlSideEl = document.getElementById("control-side");
@@ -69,13 +70,13 @@ const I18N = {
     feedbackSendError: "Gönderilemedi, lütfen biraz sonra tekrar dene.",
     subtitle: "Letterboxd watchlist CSV'ni sürükle, hangi sırada hangi platforma abone olman gerektiğini gör.",
     howtoSummary: "Nasıl Kullanılır?",
-    howtoStep1: "Letterboxd'da <strong>Profil → Watchlist → Export watchlist</strong> yoluna git — bir <code>.csv</code> dosyası doğrudan iner (zip yok).",
+    howtoStep1: "Letterboxd'da <strong>Profil → Watchlist → Export watchlist</strong> yoluna git, bir <code>.csv</code> dosyası doğrudan iner.",
     howtoStep2: "1. adımı video olarak izle (56 sn)",
     howtoVideoPlayLabel: "Videoyu oynat",
-    howtoStep3: "O CSV dosyasını aşağıdaki alana sürükle-bırak (ya da alana tıkla ve dosyayı seç).",
-    howtoStep4: "Üst taraftan ülkeni seç — varsayılan Türkiye. JustWatch'ta o ülkedeki abonelik seçenekleri aranır, biraz sürebilir.",
-    howtoStep5: "Arama bitince, hangi sırayla hangi platforma abone olursan watchlist'ini en hızlı bitireceğini görürsün.",
-    howtoStep6: "Poster'in sağ üstündeki <strong>&check;</strong> izledim işaretler, sol üstteki sarı <strong>&#9888;</strong> ise eşleşmeyi kontrol etmeni önerir.",
+    howtoStep3: "O CSV dosyasını aşağıdaki alana sürükle-bırak (ya da tıkla ve seç).",
+    howtoStep4: "Üst taraftan ülkeni seç (varsayılan Türkiye).",
+    howtoStep5: "Arama bitince hangi sırayla hangi platforma abone olacağını görürsün.",
+    howtoStep6: "Poster'in sağ üstündeki <strong>&check;</strong> izledim işaretler, sol üstteki <strong>&#9888;</strong> eşleşmeyi kontrol etmeni önerir.",
     howtoNote: "Watchlist'in bir kere yüklendikten sonra hatırlanır, sayfayı tekrar açtığında otomatik gelir. Güncellemek için yeni CSV'yi tekrar sürükleyip bırakman yeterli.",
     devModeLabel: "Geliştirici Modu",
     devClearBtn: "Cache'i Temizle",
@@ -163,13 +164,13 @@ const I18N = {
     feedbackSendError: "Couldn't send, please try again in a bit.",
     subtitle: "Drag in your Letterboxd watchlist CSV and see which order to subscribe to which platform.",
     howtoSummary: "How Does This Work?",
-    howtoStep1: "Go to <strong>Profile → Watchlist → Export watchlist</strong> on Letterboxd — a <code>.csv</code> file downloads directly (no zip).",
+    howtoStep1: "On Letterboxd, go to <strong>Profile → Watchlist → Export watchlist</strong>; a <code>.csv</code> file downloads directly.",
     howtoStep2: "Watch step 1 as a video (56s)",
     howtoVideoPlayLabel: "Play the video",
-    howtoStep3: "Drag that CSV file onto the box below (or click it and choose the file).",
-    howtoStep4: "Pick your country above — Turkey by default. Subscription options in that country are searched on JustWatch, which can take a bit.",
-    howtoStep5: "Once the search finishes, you'll see which order to subscribe to which platform to get through your watchlist fastest.",
-    howtoStep6: "The <strong>&check;</strong> on a poster's top-right marks it watched; the yellow <strong>&#9888;</strong> on the top-left means the match is worth double-checking.",
+    howtoStep3: "Drag that CSV file onto the box below (or click and choose it).",
+    howtoStep4: "Pick your country above (Turkey by default).",
+    howtoStep5: "When the search finishes, you'll see which platform to subscribe to in which order.",
+    howtoStep6: "The <strong>&check;</strong> on a poster's top-right marks it watched; the <strong>&#9888;</strong> on the top-left suggests checking the match.",
     howtoNote: "Your watchlist is remembered after the first upload and loads automatically next time you open the page. To update it, just drag in a new CSV.",
     devModeLabel: "Developer Mode",
     devClearBtn: "Clear Cache",
@@ -998,6 +999,7 @@ async function uploadCsv(csvText, preset = null) {
   progressPanel.classList.remove("hidden");
   progressFill.classList.remove("busy");
   progressFill.style.width = "6%";
+  progressPercent.textContent = "";
   progressDetail.textContent = t("progressLoading");
 
   const res = await fetch("/api/upload", {
@@ -1032,6 +1034,7 @@ function pollStatus(jobId) {
       const pct = Math.max(6, Math.round((job.done / job.total) * 100));
       progressFill.classList.remove("busy");
       progressFill.style.width = pct + "%";
+      progressPercent.textContent = pct + "%";
       progressDetail.textContent = `[${job.done}/${job.total}] ${job.current}`;
     } else if (job.total > 0 && (job.phase === "index" || job.phase === "batch")) {
       progressFill.classList.add("busy");
