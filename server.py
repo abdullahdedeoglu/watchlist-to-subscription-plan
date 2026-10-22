@@ -201,6 +201,13 @@ STATIC_FILES = {
     "/app.js": ("app.js", "application/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
     "/favicon.svg": ("favicon.svg", "image/svg+xml"),
+    "/assets/apple-touch-icon.png": ("assets/apple-touch-icon.png", "image/png"),
+    "/assets/og-image.jpg": ("assets/og-image.jpg", "image/jpeg"),
+    "/assets/grain.jpg": ("assets/grain.jpg", "image/jpeg"),
+    "/assets/beam.webp": ("assets/beam.webp", "image/webp"),
+    "/assets/film-strip.webp": ("assets/film-strip.webp", "image/webp"),
+    "/assets/ticket-frame.webp": ("assets/ticket-frame.webp", "image/webp"),
+    "/assets/video-cover.jpg": ("assets/video-cover.jpg", "image/jpeg"),
     "/presets/imdb-top-250.csv": ("presets/imdb-top-250.csv", "text/csv; charset=utf-8"),
     "/presets/letterboxd-top-500.csv": ("presets/letterboxd-top-500.csv", "text/csv; charset=utf-8"),
 }
