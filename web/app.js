@@ -130,7 +130,7 @@ const I18N = {
     reviewToggleTitle: "Eşleşme yanlış olabilir, kontrol et",
     justwatchMatchNote: (m) => `JustWatch: ${m.matched_title} (${m.matched_year ?? "?"})`,
     alsoOnPrefix: "Ayrıca:",
-    alreadyAvailableTitle: (platforms, count) => `Zaten izleyebilirsin - ${platforms} (${count} film)`,
+    alreadyAvailableTitle: (platforms, count) => `Zaten izleyebilirsin · ${platforms} (${count} film)`,
     orderLabel: (n) => `${n}. Sıra`,
     movieCountLabel: (n) => `${n} film`,
     rentBuyTitle: (n) => `Kirala/Satın Al ile İzleyebilirsin (${n})`,
@@ -224,7 +224,7 @@ const I18N = {
     reviewToggleTitle: "Match might be wrong, check it",
     justwatchMatchNote: (m) => `JustWatch: ${m.matched_title} (${m.matched_year ?? "?"})`,
     alsoOnPrefix: "Also on:",
-    alreadyAvailableTitle: (platforms, count) => `You can already watch these - ${platforms} (${count} movies)`,
+    alreadyAvailableTitle: (platforms, count) => `You can already watch these · ${platforms} (${count} movies)`,
     orderLabel: (n) => `Step ${n}`,
     movieCountLabel: (n) => `${n} movies`,
     rentBuyTitle: (n) => `Available to Rent/Buy (${n})`,
@@ -806,8 +806,9 @@ function panelForEntry(entry, plan) {
 function nowhereChip(movie) {
   const chip = document.createElement("span");
   chip.className = "nowhere-chip" + (movie.needs_review ? " needs-review" : "");
-  const label = movie.needs_review ? " ⚠" : "";
-  chip.innerHTML = `${movie.title} <span class="yr">${movie.year}</span>${label}`;
+  // Uyari isareti etiketin solunda; ucgeni CSS ciziyor.
+  const mark = movie.needs_review ? `<span class="review-mark" aria-hidden="true"></span>` : "";
+  chip.innerHTML = `${mark}${movie.title} <span class="yr">${movie.year}</span>`;
   if (movie.needs_review) {
     chip.title = t("reviewToggleTitle");
     chip.addEventListener("click", () => openRematchModal(movie));
