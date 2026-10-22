@@ -3,21 +3,56 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title id="page-title" data-i18n="pageTitle">Watchlist Planı</title>
-<meta name="description" content="Letterboxd watchlist'ini yükle, hangi sırada hangi platforma abone olursan listeni en hızlı bitireceğini gör." />
-<meta name="theme-color" content="#121210" />
+<title id="page-title" data-i18n="pageTitle">WatchPlan – Letterboxd Watchlist'ine Göre Abonelik Sırası</title>
+<meta name="description" content="Letterboxd watchlist'ini yükle, filmlerin hangi platformda olduğunu gör ve hangi sırayla abone olursan listeni en hızlı bitireceğini öğren. Ücretsiz." />
+<link rel="canonical" href="https://watchplan.onrender.com/" />
+<meta name="theme-color" content="#0d0e0c" />
+<link rel="icon" href="/favicon.ico" sizes="48x48" />
+<link rel="icon" type="image/png" sizes="48x48" href="/assets/favicon-48.png" />
 <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png" />
 <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png" />
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="WatchPlan" />
-<meta property="og:title" content="WatchPlan" />
+<meta property="og:locale" content="tr_TR" />
+<meta property="og:locale:alternate" content="en_US" />
+<meta property="og:title" content="WatchPlan – Letterboxd Watchlist'ine Göre Abonelik Sırası" />
 <meta property="og:description" content="Watchlist'ini en hızlı hangi platform sırasıyla bitirirsin? Letterboxd listeni yükle, abonelik sıranı gör." />
 <meta property="og:url" content="https://watchplan.onrender.com/" />
 <meta property="og:image" content="https://watchplan.onrender.com/assets/og-image.jpg" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="WatchPlan logosu ve “Watchlist'ini en hızlı hangi platform sırasıyla bitirirsin?” yazısı" />
 <meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="WatchPlan – Letterboxd Watchlist'ine Göre Abonelik Sırası" />
+<meta name="twitter:description" content="Watchlist'ini en hızlı hangi platform sırasıyla bitirirsin? Letterboxd listeni yükle, abonelik sıranı gör." />
+<meta name="twitter:image" content="https://watchplan.onrender.com/assets/og-image.jpg" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "WatchPlan",
+  "url": "https://watchplan.onrender.com/",
+  "description": "Letterboxd watchlist'ini yükle, filmlerin hangi platformda olduğunu gör ve hangi sırayla abone olursan listeni en hızlı bitireceğini öğren. Ücretsiz.",
+  "applicationCategory": "EntertainmentApplication",
+  "operatingSystem": "Web",
+  "inLanguage": [
+    "tr",
+    "en"
+  ],
+  "image": "https://watchplan.onrender.com/assets/og-image.jpg",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "TRY"
+  },
+  "author": {
+    "@type": "Person",
+    "name": "Abdullah Dedeoğlu"
+  }
+}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,700..900&family=Fira+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
@@ -29,10 +64,10 @@
 
   <header class="top">
     <div class="top-bar">
-      <div class="brand">
+      <h1 class="brand">
         <img class="brand-mark" src="/assets/logo-mark.webp" alt="" width="86" height="144" />
         <img class="brand-name" src="/assets/wordmark.webp" alt="WatchPlan" width="960" height="178" />
-      </div>
+      </h1>
       <nav class="top-links">
         <button id="feedback-open" class="top-link" type="button" data-i18n="feedbackLink">Geri Bildirim</button>
         <div class="country-row">

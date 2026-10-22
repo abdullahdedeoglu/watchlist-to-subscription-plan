@@ -200,8 +200,15 @@ STATIC_FILES = {
     "/index.html": ("index.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "application/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
+    "/robots.txt": ("robots.txt", "text/plain; charset=utf-8"),
+    "/sitemap.xml": ("sitemap.xml", "application/xml; charset=utf-8"),
+    "/site.webmanifest": ("site.webmanifest", "application/manifest+json; charset=utf-8"),
+    "/favicon.ico": ("favicon.ico", "image/x-icon"),
     "/assets/apple-touch-icon.png": ("assets/apple-touch-icon.png", "image/png"),
     "/assets/favicon-32.png": ("assets/favicon-32.png", "image/png"),
+    "/assets/favicon-48.png": ("assets/favicon-48.png", "image/png"),
+    "/assets/icon-192.png": ("assets/icon-192.png", "image/png"),
+    "/assets/icon-512.png": ("assets/icon-512.png", "image/png"),
     "/assets/favicon-16.png": ("assets/favicon-16.png", "image/png"),
     "/assets/logo-mark.webp": ("assets/logo-mark.webp", "image/webp"),
     "/assets/og-image.jpg": ("assets/og-image.jpg", "image/jpeg"),
@@ -309,6 +316,9 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", str(len(body)))
+            if path.startswith("/assets/") or path == "/favicon.ico":
+                # Gorseller nadiren degisir; bir gun onbellekte kalsin.
+                self.send_header("Cache-Control", "public, max-age=86400")
             self._set_cookie_header()
             self.end_headers()
             self.wfile.write(body)

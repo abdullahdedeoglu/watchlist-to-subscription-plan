@@ -55,7 +55,7 @@ const LANG_MANUAL_STORAGE_KEY = "watchlist-lang-manual";
 // hangi ulkelerin o dili varsayilan aldigini ekle.
 const I18N = {
   tr: {
-    pageTitle: "WatchPlan",
+    pageTitle: "WatchPlan – Letterboxd Watchlist'ine Göre Abonelik Sırası",
     brandName: "WatchPlan",
     feedbackLink: "Geri Bildirim",
     feedbackModalTitle: "Geri Bildirim",
@@ -148,7 +148,7 @@ const I18N = {
     searchNoResults: "Bu isimle eşleşen film bulunamadı.",
   },
   en: {
-    pageTitle: "WatchPlan",
+    pageTitle: "WatchPlan – Streaming Subscription Order for Your Letterboxd Watchlist",
     brandName: "WatchPlan",
     feedbackLink: "Feedback",
     feedbackModalTitle: "Feedback",
