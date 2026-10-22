@@ -75,8 +75,20 @@ body::before {
     radial-gradient(360px 280px at 0% 100%, rgba(185, 79, 30, 0.30), rgba(113, 53, 29, 0.12) 55%, transparent 100%),
     radial-gradient(480px 320px at 100% 100%, rgba(185, 79, 30, 0.30), rgba(113, 53, 29, 0.12) 55%, transparent 100%),
     /* 28px yan kenar emulsiyonu, iceride 24px'te soner */
-    linear-gradient(90deg, rgba(185, 79, 30, 0.45), rgba(113, 53, 29, 0.2) 4px, transparent 28px),
-    linear-gradient(270deg, rgba(185, 79, 30, 0.45), rgba(113, 53, 29, 0.2) 4px, transparent 28px);
+    /* yan kenar emulsiyonu (spec katman 4, %45 opaklik gorselde) */
+    url("/assets/edge-stain-left.webp") left top / 64px auto repeat-y,
+    url("/assets/edge-stain-right.webp") right top / 64px auto repeat-y;
+}
+
+/* mobilde yanik sayfa cercevesi yok (spec 1.1) */
+@media (max-width: 767px) {
+  body::before,
+  body:has(.dropzone.compact)::before {
+    background:
+      radial-gradient(560px 280px at 100% 0%, rgba(185, 79, 30, 0.08), transparent 100%),
+      radial-gradient(360px 280px at 0% 100%, rgba(185, 79, 30, 0.08), transparent 100%);
+  }
+  body::after { opacity: 0.06; }
 }
 
 /* gren ayri katmanda, kendi opakligiyla */
@@ -96,8 +108,9 @@ body:has(.dropzone.compact)::before {
     radial-gradient(560px 280px at 100% 0%, rgba(185, 79, 30, 0.30), rgba(113, 53, 29, 0.12) 55%, transparent 100%),
     radial-gradient(360px 280px at 0% 100%, rgba(185, 79, 30, 0.15), rgba(113, 53, 29, 0.06) 55%, transparent 100%),
     radial-gradient(480px 320px at 100% 100%, rgba(185, 79, 30, 0.15), rgba(113, 53, 29, 0.06) 55%, transparent 100%),
-    linear-gradient(90deg, rgba(185, 79, 30, 0.45), rgba(113, 53, 29, 0.2) 4px, transparent 28px),
-    linear-gradient(270deg, rgba(185, 79, 30, 0.45), rgba(113, 53, 29, 0.2) 4px, transparent 28px);
+    /* yan kenar emulsiyonu (spec katman 4, %45 opaklik gorselde) */
+    url("/assets/edge-stain-left.webp") left top / 64px auto repeat-y,
+    url("/assets/edge-stain-right.webp") right top / 64px auto repeat-y;
 }
 
 /* sayfa kenarlarindaki perforasyon seridi: 20px; ilk ziyaret/yuklemede
@@ -155,24 +168,27 @@ body:has(.dropzone.compact)::before {
 .page:has(.dropzone.compact) .top { margin-bottom: 4px; }
 
 /* Projektor isigi (spec 1.2): sivri uc "Geri Bildirim"in solunda,
-   yelpaze sol uste acilir; yaklasik 520x130. Gecici olarak mevcut isik
-   gorseli dikey aynalanip basiklastiriliyor. */
+   yelpaze sol uste acilir. Gorselde uc, kutunun %95 / %93 noktasinda;
+   kutu her ekranda ucu spec'teki noktaya getirecek sekilde konumlu.
+   Ilk ziyaret: uc x=996, y=116. */
 .top::before {
   content: "";
   position: absolute;
-  top: -82px;
-  right: 376px;
+  top: -24px;
+  right: 360px;
   width: 560px;
-  height: 160px;
+  height: 150px;
   pointer-events: none;
   z-index: -1;
-  background: url("/assets/beam.webp") 0 0 / 100% 100% no-repeat;
-  transform: scaleY(-1);
+  background: url("/assets/beam-v2.webp") 0 0 / 100% 100% no-repeat;
   opacity: 0.52;
   mix-blend-mode: screen;
 }
 
-.page:has(.dropzone.compact) .top::before { opacity: 0.38; }
+/* sonuc: uc x=1008, y=78 */
+.page:has(.dropzone.compact) .top::before { top: -62px; right: 376px; opacity: 0.38; }
+/* yukleme: uc x=1012, y=110 */
+.page:has(#progress:not(.hidden)) .top::before { top: -30px; right: 352px; opacity: 0.52; }
 
 .top-bar {
   display: flex;
@@ -717,7 +733,7 @@ button.top-link {
    diye alan ayni en-boy oraninda; ic kisim cercevenin bandi icinde koyu. */
 @media (min-width: 901px) {
   .dropzone:not(.compact) {
-    aspect-ratio: 4.507;
+    aspect-ratio: 4.082;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -728,16 +744,30 @@ button.top-link {
     -webkit-mask: none;
     mask: none;
     background:
-      url("/assets/ticket-frame.webp") 0 0 / 100% 100% no-repeat,
-      linear-gradient(200deg, transparent 38%, rgba(255, 196, 120, 0.13) 52%, transparent 66%) 50% 50% / 90% 86% no-repeat,
-      radial-gradient(120% 140% at 85% 0%, rgba(255, 186, 104, 0.16), transparent 55%) 50% 50% / 90% 86% no-repeat,
-      linear-gradient(#15130f, #15130f) 50% 50% / 90% 86% no-repeat;
+      url("/assets/ticket-frame-v2.webp") 0 0 / 100% 100% no-repeat,
+      /* metin cevresi sakin kalsin diye ortada koyu gecis */
+      radial-gradient(40% 45% at 50% 62%, rgba(20, 22, 18, 0.85), transparent 100%) 50% 50% / 89% 90% no-repeat,
+      url("/assets/grain.jpg") 50% 50% / 89% 90% no-repeat;
     filter: drop-shadow(0 18px 40px rgba(232, 145, 63, 0.18));
     transition: transform 0.12s ease, filter 0.15s ease;
   }
 
-  .dropzone:not(.compact)::before,
   .dropzone:not(.compact)::after { display: none; }
+
+  /* biletin icindeki ikinci isik: uc sag tarafta, yelpaze sol uste;
+     yalniz dekor, metnin ustune opak gelmez */
+  .dropzone:not(.compact)::before {
+    inset: auto;
+    left: 52%;
+    top: -4%;
+    width: 42.8%;
+    height: 72%;
+    border: none;
+    border-radius: 0;
+    background: url("/assets/beam-v2.webp") 0 0 / 100% 100% no-repeat;
+    opacity: 0.32;
+    mix-blend-mode: screen;
+  }
 
   .dropzone:not(.compact):hover { box-shadow: none; filter: drop-shadow(0 18px 46px rgba(232, 145, 63, 0.4)) brightness(1.06); }
 }
@@ -2050,7 +2080,9 @@ button.top-link {
   .page { padding: 22px 20px 60px; }
   .page::before,
   .page::after { display: none; }
-  .top::before { top: -90px; right: -30px; width: 560px; height: 315px; opacity: 0.26; }
+  .top::before { top: -60px; right: 8px; width: 300px; height: 80px; opacity: 0.14; }
+  .page:has(.dropzone.compact) .top::before,
+  .page:has(#progress:not(.hidden)) .top::before { top: -60px; right: 8px; opacity: 0.14; }
   .brand-name { font-size: 48px; }
   .brand-mark { width: 42px; height: 42px; }
   .brand-mark { width: 34px; height: 34px; }
