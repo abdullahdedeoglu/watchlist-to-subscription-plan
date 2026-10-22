@@ -204,8 +204,8 @@ body::after {
 .page:has(#progress:not(.hidden)) .top-bar { min-height: 92px; }
 .page:not(:has(.dropzone.compact)) .brand-mark,
 .page:has(#progress:not(.hidden)) .brand-mark { width: 72px; height: 72px; margin: 0 -14px 0 -15px; }
-.page:not(:has(.dropzone.compact)) .brand-name,
-.page:has(#progress:not(.hidden)) .brand-name { font-size: 80px; line-height: 88px; }
+.page:not(:has(.dropzone.compact)) .brand-name { width: 347px; }
+.page:has(#progress:not(.hidden)) .brand-name { width: 380px; }
 
 .brand {
   display: flex;
@@ -222,21 +222,13 @@ body::after {
   color: var(--accent);
 }
 
+/* "WatchPlan" yazisi GPT'nin cizdigi gorsel (cizimdeki harflerin aynisi);
+   genislikler cizimlerden olculdu: sonuc 314, ilk ziyaret 347, arama 380 */
 .brand-name {
-  font-family: var(--f-display);
-  font-style: italic;
-  font-weight: 900;
-  font-size: 76px;
-  line-height: 76px;
-  letter-spacing: -2.4px;
-  color: var(--text);
-}
-
-.brand-name-accent {
-  background: linear-gradient(180deg, var(--accent-bright), var(--accent));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  display: block;
+  width: 314px;
+  height: auto;
+  margin-left: 4px;
 }
 
 .top-links {
@@ -2341,7 +2333,9 @@ button.top-link {
   .top::before { top: -60px; right: 8px; width: 300px; height: 80px; opacity: 0.14; }
   .page:has(.dropzone.compact) .top::before,
   .page:has(#progress:not(.hidden)) .top::before { top: -60px; right: 8px; opacity: 0.14; }
-  .brand-name { font-size: 48px; }
+  .brand-name,
+  .page:not(:has(.dropzone.compact)) .brand-name,
+  .page:has(#progress:not(.hidden)) .brand-name { width: 260px; }
   .brand-mark { width: 52px; height: 52px; }
   .howto-content { grid-template-columns: 1fr; row-gap: 20px; }
   .howto-steps { padding-right: 0; }
@@ -2443,7 +2437,7 @@ button.top-link {
   .brand { gap: 8px; }
   .brand-name,
   .page:not(:has(.dropzone.compact)) .brand-name,
-  .page:has(#progress:not(.hidden)) .brand-name { font-size: 40px; line-height: 44px; letter-spacing: -1.2px; }
+  .page:has(#progress:not(.hidden)) .brand-name { width: 204px; margin-left: 2px; }
   .brand-mark,
   .page:not(:has(.dropzone.compact)) .brand-mark,
   .page:has(#progress:not(.hidden)) .brand-mark { width: 44px; height: 44px; margin: 0 -8px 0 -9px; }

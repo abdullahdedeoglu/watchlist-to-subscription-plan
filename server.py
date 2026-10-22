@@ -206,6 +206,7 @@ STATIC_FILES = {
     "/assets/grain.jpg": ("assets/grain.jpg", "image/jpeg"),
     "/assets/beam-v2.webp": ("assets/beam-v2.webp", "image/webp"),
     "/assets/edge-burn.webp": ("assets/edge-burn.webp", "image/webp"),
+    "/assets/wordmark.webp": ("assets/wordmark.webp", "image/webp"),
     "/assets/edge-stain-left.webp": ("assets/edge-stain-left.webp", "image/webp"),
     "/assets/edge-stain-right.webp": ("assets/edge-stain-right.webp", "image/webp"),
     "/assets/film-strip.webp": ("assets/film-strip.webp", "image/webp"),
