@@ -99,6 +99,27 @@ body::after {
   opacity: 0.16;
 }
 
+/* zemin yasasin: yanik kenarlar projektor gibi yavasca nefes alir,
+   gren film gibi titrer */
+@media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+  body::before { animation: burn-breathe 7s ease-in-out infinite alternate; }
+  body::after {
+    inset: -64px;
+    animation: grain-flicker 0.8s steps(1) infinite;
+  }
+}
+@keyframes burn-breathe {
+  from { opacity: 1; }
+  to { opacity: 0.72; }
+}
+@keyframes grain-flicker {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-23px, 17px); }
+  40% { transform: translate(31px, -9px); }
+  60% { transform: translate(-12px, -28px); }
+  80% { transform: translate(19px, 26px); }
+}
+
 /* mobilde yanik sayfa cercevesi yok, sadece hafif kose isigi */
 @media (max-width: 767px) {
   body::before,
@@ -145,8 +166,6 @@ body::after {
   padding: 0 56px 80px;
   position: relative;
   z-index: 1;
-  /* basliktaki isik huzmesi kenardan tasabilir; yatay kaydirma olusmasin */
-  overflow-x: clip;
 }
 
 .page:has(.dropzone.compact) { padding: 0 28px 48px; }
@@ -157,6 +176,9 @@ body::after {
 .top {
   position: relative;
   margin-bottom: 20px;
+  /* basliktaki isik huzmesi kenardan tasabilir; yatay kaydirma olusmasin.
+     Kirpma yalniz baslikta: sayfada olunca biletin isiltisini keskin kesiyordu */
+  overflow-x: clip;
 }
 
 /* liste yuklendikten sonra tanitim cumlesine gerek yok - sonuclar yukari kaysin */
@@ -495,25 +517,37 @@ button.top-link {
 .howto-box[open] summary::after { transform: rotate(-90deg); }
 .random-pool-panel[open] summary::after { transform: rotate(90deg); }
 
-/* acikken baslik 38px satir, altinda ayrac */
-.howto-box[open] summary {
-  padding: 4px 56px 4px 22px;
-  margin: 18px 22px 0;
-  padding-left: 0;
-  border-bottom: 1px solid var(--border-soft);
+/* acikken baslik yerinde kalir (kayma olmasin); ayrac alt kenarda iceriden */
+.howto-box summary {
+  background: linear-gradient(var(--border-soft), var(--border-soft)) 50% 100% / calc(100% - 44px) 1px no-repeat;
+  background-size: 0 1px;
+  transition: background-size 0.3s ease;
 }
+.howto-box[open] summary { background-size: calc(100% - 44px) 1px; }
 
-.howto-box[open] summary::after { right: 0; }
+/* acilis/kapanis animasyonu (destekleyen tarayicilarda yukseklik kayar) */
+.howto-box { interpolate-size: allow-keywords; }
+.howto-box::details-content {
+  block-size: 0;
+  overflow: hidden;
+  transition: block-size 0.35s ease, content-visibility 0.35s allow-discrete;
+}
+.howto-box[open]::details-content { block-size: auto; }
+.howto-box[open] .howto-content { animation: howto-in 0.35s ease both; }
+@keyframes howto-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
 
 /* sonuc ekrani: kompakt 40px satir */
 .page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) .howto-box { margin-bottom: 6px; }
-.page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) .howto-box:not([open]) summary {
+.page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) .howto-box summary {
   font-weight: 400;
   font-size: 16px;
   line-height: 22px;
   padding: 8px 48px 8px 20px;
 }
-.page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) .howto-box:not([open]) summary::after {
+.page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) .howto-box summary::after {
   right: 16px;
   width: 16px;
   height: 16px;
@@ -803,24 +837,24 @@ button.top-link {
 }
 
 .dropzone-icon {
-  width: 84px;
-  height: 102px;
-  margin: 0 auto 14px;
+  width: 64px;
+  height: 78px;
+  margin: 0 auto 12px;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 24' fill='none' stroke='%23dab56d' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1.5 1.2h11l6 6v15.6h-17z'/%3E%3Cpath d='M12.3 1.4v6h6M10 18.6v-7.8m-3.4 3.3 3.4-3.4 3.4 3.4'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
 .dropzone-text {
   font-family: var(--f-display);
   font-weight: 650;
-  font-size: 52px;
-  line-height: 56px;
+  font-size: 40px;
+  line-height: 46px;
   color: var(--text);
 }
 
 .dropzone-sub {
   color: var(--text-dim);
-  font-size: 28px;
-  line-height: 36px;
+  font-size: 21px;
+  line-height: 28px;
   margin-top: 4px;
 }
 
@@ -882,6 +916,8 @@ button.top-link {
 
 /* ilk ziyarette iki ornek liste dugmesi: 60px, altin 1px kenar */
 .csv-actions {
+  position: relative;
+  z-index: 2;
   display: flex;
   justify-content: center;
   gap: 16px;
@@ -1083,6 +1119,8 @@ button.top-link {
 
 @media (prefers-reduced-motion: reduce) {
   .progress-bar-fill.busy { animation: none; }
+  .howto-box::details-content { transition: none; }
+  .howto-box[open] .howto-content { animation: none; }
 }
 
 /* ---------- Istatistikler ---------- */
@@ -2460,11 +2498,11 @@ button.top-link {
   .howto-box,
   .page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) .howto-box { margin-bottom: 8px; }
   .howto-box summary,
-  .page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) .howto-box:not([open]) summary,
+  .page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) .howto-box summary,
   .page:has(#progress:not(.hidden)) .howto-box summary {
     font-size: 14px; line-height: 20px; padding: 7px 40px 7px 14px;
   }
-  .howto-box[open] summary { margin: 14px 14px 0; padding-left: 0; }
+  .howto-box[open] summary { background-size: calc(100% - 28px) 1px; }
   .howto-content { grid-template-columns: 1fr; row-gap: 18px; padding: 14px 14px 16px; }
   .howto-steps { font-size: 14px; line-height: 20px; padding-right: 0; }
   .howto-steps li { padding: 4px 0 4px 44px; min-height: 32px; margin-bottom: 10px; }
