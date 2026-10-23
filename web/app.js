@@ -143,6 +143,11 @@ const I18N = {
     errorsTitle: (n) => `Eşleştirilemeyen Filmler (${n})`,
     addFilmTriggerTitle: "Film Ekle",
     removeToggleTitle: "Listeden Kaldır",
+    confirmCancel: "Vazgeç",
+    removeFilmTitle: "Film Kaldırılsın Mı?",
+    removeFilmOk: "Kaldır",
+    presetConfirmTitle: "Büyük Arama Başlatılsın Mı?",
+    presetConfirmOk: "Devam Et",
     removeFilmConfirm: "Bu film watchlist'ten kalıcı olarak kaldırılsın mı? (Letterboxd'daki gerçek watchlist'ini etkilemez, sadece bu araçtaki görünümü.)",
     movieSearchPlaceholder: "Listende ara...",
     searchNoResults: "Bu isimle eşleşen film bulunamadı.",
@@ -236,6 +241,11 @@ const I18N = {
     errorsTitle: (n) => `Movies That Couldn't Be Matched (${n})`,
     addFilmTriggerTitle: "Add a Movie",
     removeToggleTitle: "Remove From List",
+    confirmCancel: "Cancel",
+    removeFilmTitle: "Remove This Movie?",
+    removeFilmOk: "Remove",
+    presetConfirmTitle: "Start a Big Search?",
+    presetConfirmOk: "Continue",
     removeFilmConfirm: "Permanently remove this movie from your watchlist here? (Doesn't touch your actual Letterboxd watchlist, just this tool's view of it.)",
     movieSearchPlaceholder: "Search your list...",
     searchNoResults: "No movie matches that name.",
@@ -929,7 +939,12 @@ fileInput.addEventListener("change", () => {
 
 for (const btn of document.querySelectorAll(".csv-action-btn[data-preset]")) {
   btn.addEventListener("click", async () => {
-    if (!confirm(t("presetConfirm", btn.dataset.count))) return;
+    const ok = await confirmDialog({
+      title: t("presetConfirmTitle"),
+      message: t("presetConfirm", btn.dataset.count),
+      okText: t("presetConfirmOk"),
+    });
+    if (!ok) return;
     const originalText = btn.textContent;
     btn.disabled = true;
     btn.textContent = t("presetLoading");
@@ -1491,8 +1506,52 @@ async function addFilm(candidate) {
   if (lastCsvText) uploadCsv(lastCsvText, lastPreset);
 }
 
+// Tarayici confirm() yerine sitenin kendi onay penceresi (mobilde alttan
+// acilan panel). Promise<boolean> doner.
+const confirmModal = document.getElementById("confirm-modal");
+const confirmTitle = document.getElementById("confirm-title");
+const confirmMessage = document.getElementById("confirm-message");
+const confirmOk = document.getElementById("confirm-ok");
+const confirmCancel = document.getElementById("confirm-cancel");
+
+function confirmDialog({ title, message, okText, danger = false }) {
+  return new Promise((resolve) => {
+    confirmTitle.textContent = title;
+    confirmMessage.textContent = message;
+    confirmOk.textContent = okText;
+    confirmOk.classList.toggle("confirm-btn--danger", danger);
+    const previousFocus = document.activeElement;
+    confirmModal.classList.remove("hidden");
+    confirmOk.focus();
+
+    function finish(result) {
+      confirmModal.classList.add("hidden");
+      confirmOk.removeEventListener("click", onOk);
+      confirmCancel.removeEventListener("click", onCancel);
+      confirmModal.removeEventListener("click", onBackdrop);
+      document.removeEventListener("keydown", onKey);
+      previousFocus?.focus?.();
+      resolve(result);
+    }
+    const onOk = () => finish(true);
+    const onCancel = () => finish(false);
+    const onBackdrop = (e) => { if (e.target === confirmModal) finish(false); };
+    const onKey = (e) => { if (e.key === "Escape") finish(false); };
+    confirmOk.addEventListener("click", onOk);
+    confirmCancel.addEventListener("click", onCancel);
+    confirmModal.addEventListener("click", onBackdrop);
+    document.addEventListener("keydown", onKey);
+  });
+}
+
 async function removeFilm(uri) {
-  if (!confirm(t("removeFilmConfirm"))) return;
+  const ok = await confirmDialog({
+    title: t("removeFilmTitle"),
+    message: t("removeFilmConfirm"),
+    okText: t("removeFilmOk"),
+    danger: true,
+  });
+  if (!ok) return;
   await fetch("/api/remove-film", {
     method: "POST",
     body: JSON.stringify({ uri, preset: lastPreset }),

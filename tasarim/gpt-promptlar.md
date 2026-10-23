@@ -286,3 +286,42 @@ as 3 phone frames side by side:
 
 3) A modal on mobile: the "Rastgele Film" sheet as a bottom sheet.
 ```
+
+## 6. Mobil ve tablet ilk giriş ekranı (geri bildirim turu)
+
+Ekle: `tasarim/watchplan-brand/first-visit-desktop.png` (senin çizimin) ve
+arkadaşın gönderdiği mevcut mobil/tablet ilk ekran görüntüleri.
+
+```
+Same WatchPlan design language as your desktop first-visit drawing
+(attached). Feedback from a tester: on PHONE and TABLET the first-visit
+screen looks weak. Everything is crammed at the top and the lower half of
+the screen is empty. Draw the FIRST-VISIT screen (no list loaded yet) as
+two frames side by side:
+
+1) PHONE, 390×844, one full screen, no scrolling needed to see the main
+   action.
+2) TABLET portrait, 820×1180, one full screen.
+
+Content (all Turkish, keep it, don't add new features):
+- Header: the ticket mark + "WatchPlan" wordmark. Language (Türkçe),
+  country (Türkiye) and "Geri Bildirim" must become compact ICON buttons
+  on phone (globe icon, location/flag icon, speech-bubble icon), same
+  thin gold line style as the rest of the UI. On tablet decide: icons or
+  small labelled pills.
+- Subtitle: "Letterboxd watchlist CSV'ni sürükle, hangi sırada hangi
+  platforma abone olman gerektiğini gör."
+- Collapsed "Nasıl Kullanılır?" row.
+- The film-ticket drop zone: "CSV Dosyasını Buraya Sürükle" / "Ya da
+  tıkla ve seç" (on phone it means tap to choose a file).
+- Two sample buttons: "Letterboxd Top 500 Yükle", "IMDb Top 250 Yükle".
+
+The point of this drawing: use the vertical space well. The ticket should
+sit in the visual centre of the screen (the tester explicitly asked for
+the ticket to be centred on tablet), the composition should feel
+intentional top to bottom, not a stack with dead space below. You may use
+the projector beam, the burnt film edges and drifting orange dust in the
+empty areas, and scale the ticket up. Keep text sizes modest: the tester
+said our headings and ticket text feel too big. Use your image generation
+tool to draw it, don't write code.
+```
