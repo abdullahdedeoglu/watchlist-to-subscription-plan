@@ -223,6 +223,8 @@ STATIC_FILES = {
     "/assets/edge-stain-right.webp": ("assets/edge-stain-right.webp", "image/webp"),
     "/assets/film-strip.webp": ("assets/film-strip.webp", "image/webp"),
     "/assets/ticket-frame-v3.webp": ("assets/ticket-frame-v3.webp", "image/webp"),
+    "/assets/ticket-frame-phone.webp": ("assets/ticket-frame-phone.webp", "image/webp"),
+    "/assets/ticket-frame-tablet.webp": ("assets/ticket-frame-tablet.webp", "image/webp"),
     "/assets/modal-edge.webp": ("assets/modal-edge.webp", "image/webp"),
     "/assets/modal-edge-right.webp": ("assets/modal-edge-right.webp", "image/webp"),
     "/assets/video-cover.jpg": ("assets/video-cover.jpg", "image/jpeg"),

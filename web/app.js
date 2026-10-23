@@ -1924,3 +1924,104 @@ function renderFooterNotes(plan) {
 
   if (any) footerEl.classList.remove("hidden");
 }
+
+// ---------- Dil/ulke menusu ----------
+// Tarayicinin standart acilir listesi yerine sitenin kendi menusu, dugmenin
+// hemen altinda. Asil <select> yerinde kalir (secili deger onda gorunur,
+// diger kod onu dinler); ustune seffaf bir dugme biner, secim yapilinca
+// select'e "change" olayi gonderilir.
+function enhancePicker(select, labelKey) {
+  if (!select) return;
+  const wrap = document.createElement("span");
+  wrap.className = "picker";
+  select.parentNode.insertBefore(wrap, select);
+  wrap.appendChild(select);
+  select.tabIndex = -1;
+  select.setAttribute("aria-hidden", "true");
+
+  const hit = document.createElement("button");
+  hit.type = "button";
+  hit.className = "picker-hit";
+  hit.setAttribute("aria-haspopup", "listbox");
+  hit.setAttribute("aria-expanded", "false");
+  wrap.appendChild(hit);
+
+  const menu = document.createElement("ul");
+  menu.className = "picker-menu";
+  menu.setAttribute("role", "listbox");
+  wrap.appendChild(menu);
+
+  function label() {
+    const opt = select.options[select.selectedIndex];
+    hit.setAttribute("aria-label", `${t(labelKey)}: ${opt ? opt.textContent : ""}`);
+  }
+
+  function items() { return [...menu.querySelectorAll(".picker-item")]; }
+
+  function open() {
+    label();
+    menu.innerHTML = "";
+    for (const opt of select.options) {
+      const li = document.createElement("li");
+      li.className = "picker-item";
+      li.setAttribute("role", "option");
+      li.tabIndex = -1;
+      li.dataset.value = opt.value;
+      li.textContent = opt.textContent;
+      if (opt.value === select.value) li.setAttribute("aria-selected", "true");
+      menu.appendChild(li);
+    }
+    wrap.classList.add("open");
+    hit.setAttribute("aria-expanded", "true");
+    const current = menu.querySelector('[aria-selected="true"]') || items()[0];
+    current?.focus({ preventScroll: true });
+    current?.scrollIntoView({ block: "nearest" });
+    document.addEventListener("pointerdown", onOutside, true);
+  }
+
+  function close(returnFocus) {
+    if (!wrap.classList.contains("open")) return;
+    wrap.classList.remove("open");
+    hit.setAttribute("aria-expanded", "false");
+    document.removeEventListener("pointerdown", onOutside, true);
+    if (returnFocus) hit.focus({ preventScroll: true });
+  }
+
+  function choose(value) {
+    close(true);
+    if (value === select.value) return;
+    select.value = value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    label();
+  }
+
+  function onOutside(e) { if (!wrap.contains(e.target)) close(false); }
+
+  hit.addEventListener("click", () => (wrap.classList.contains("open") ? close(true) : open()));
+  menu.addEventListener("click", (e) => {
+    const li = e.target.closest(".picker-item");
+    if (li) choose(li.dataset.value);
+  });
+  menu.addEventListener("keydown", (e) => {
+    const list = items();
+    const i = list.indexOf(document.activeElement);
+    if (e.key === "ArrowDown") { e.preventDefault(); list[Math.min(i + 1, list.length - 1)]?.focus(); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); list[Math.max(i - 1, 0)]?.focus(); }
+    else if (e.key === "Home") { e.preventDefault(); list[0]?.focus(); }
+    else if (e.key === "End") { e.preventDefault(); list[list.length - 1]?.focus(); }
+    else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (i >= 0) choose(list[i].dataset.value); }
+    else if (e.key === "Escape") { e.preventDefault(); close(true); }
+    else if (e.key === "Tab") close(false);
+  });
+  hit.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); open(); }
+  });
+
+  // dil degisince ya da ulke listesi yeniden kurulunca etiket guncel kalsin
+  select.addEventListener("change", label);
+  new MutationObserver(label).observe(select, { childList: true, subtree: true, characterData: true });
+  label();
+}
+
+enhancePicker(langSelect, "langLabel");
+enhancePicker(countrySelect, "countryLabel");

@@ -53,7 +53,7 @@
     canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     // yogunluk ekran alanina gore; telefonda az
-    const target = Math.round(Math.min(160, Math.max(40, (w * h) / 11000)));
+    const target = Math.round(Math.min(160, Math.max(60, (w * h) / 11000)));
     while (parts.length < target) parts.push(spawn({}, true));
     parts.length = target;
   }

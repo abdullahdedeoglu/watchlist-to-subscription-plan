@@ -2916,3 +2916,238 @@ button.top-link {
   .confirm-actions { grid-template-columns: 1fr; }
   .confirm-btn--ok { order: -1; }
 }
+
+/* ilk ziyaret, tablet ve telefon: GPT'nin cizdigi bilet cercevesi
+   (masaustundeki gibi gercek gorsel) ve bilet ekranin dikey ortasinda */
+@media (max-width: 900px) {
+  .page:not(:has(.dropzone.compact)):not(:has(#progress:not(.hidden))) {
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+  }
+  .page:not(:has(.dropzone.compact)):not(:has(#progress:not(.hidden))) .upload-bar {
+    margin-block: auto;
+    padding: 12px 0 24px;
+  }
+
+  .dropzone:not(.compact) {
+    aspect-ratio: 1400 / 646;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12%;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    -webkit-mask: none;
+    mask: none;
+    background:
+      url("/assets/ticket-frame-tablet.webp") 0 0 / 100% 100% no-repeat,
+      linear-gradient(rgba(10, 12, 10, 0.78), rgba(10, 12, 10, 0.78)) 50% 50% / 88% 88% no-repeat,
+      url("/assets/grain.jpg") 50% 50% / 88% 88% no-repeat;
+    filter: drop-shadow(0 14px 32px rgba(232, 145, 63, 0.2));
+    transition: transform 0.15s ease, filter 0.2s ease;
+  }
+  .dropzone:not(.compact)::after { display: none; }
+  .dropzone:not(.compact)::before {
+    inset: auto;
+    left: 50%;
+    top: 4%;
+    width: 44%;
+    height: 56%;
+    border: none;
+    border-radius: 0;
+    background: url("/assets/beam-v2.webp") 0 0 / 100% 100% no-repeat;
+    opacity: 0.4;
+    mix-blend-mode: screen;
+  }
+  .dropzone:not(.compact):hover { box-shadow: none; filter: drop-shadow(0 14px 38px rgba(232, 145, 63, 0.38)) brightness(1.05); }
+  .dropzone:not(.compact) .dropzone-icon { width: 60px; height: 72px; margin-bottom: 12px; }
+  .dropzone:not(.compact) .dropzone-text { font-size: 34px; line-height: 40px; }
+  .dropzone:not(.compact) .dropzone-sub { font-size: 19px; line-height: 26px; }
+  .upload-bar:not(:has(.dropzone.compact)) .csv-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 20px;
+  }
+  .upload-bar:not(:has(.dropzone.compact)) .csv-action-btn { height: 52px; justify-content: center; font-size: 15px; }
+}
+
+@media (max-width: 640px) {
+  .dropzone:not(.compact) {
+    aspect-ratio: 740 / 537;
+    padding: 0 14%;
+    background:
+      url("/assets/ticket-frame-phone.webp") 0 0 / 100% 100% no-repeat,
+      linear-gradient(rgba(10, 12, 10, 0.78), rgba(10, 12, 10, 0.78)) 50% 50% / 82% 84% no-repeat,
+      url("/assets/grain.jpg") 50% 50% / 82% 84% no-repeat;
+  }
+  .dropzone:not(.compact)::before { left: 46%; top: 8%; width: 48%; height: 48%; }
+  .dropzone:not(.compact) .dropzone-icon { width: 44px; height: 54px; margin-bottom: 10px; }
+  .dropzone:not(.compact) .dropzone-text { font-size: 23px; line-height: 28px; }
+  .dropzone:not(.compact) .dropzone-sub { font-size: 15px; line-height: 21px; }
+  .upload-bar:not(:has(.dropzone.compact)) .csv-actions { margin-top: 18px; }
+
+  /* telefonda zemin bos kalmasin: yanik kenarlar ve toz belirgin */
+  body::before,
+  body:has(.dropzone.compact):not(:has(#progress:not(.hidden)))::before {
+    background:
+      url("/assets/edge-burn.webp") 0 0 / 100% 100% no-repeat,
+      url("/assets/edge-stain-left.webp") left top / 36px auto repeat-y,
+      url("/assets/edge-stain-right.webp") right top / 36px auto repeat-y;
+    opacity: 0.8;
+  }
+  body:has(.dropzone.compact):not(:has(#progress:not(.hidden)))::before { opacity: 0.45; }
+  body::after { opacity: 0.1; }
+}
+
+/* dil/ulke menusu (app.js enhancePicker): dugmenin altinda, sagdan hizali */
+.picker { position: relative; display: block; }
+.picker select { pointer-events: none; }
+.picker-hit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+.picker-hit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.picker:hover select,
+.picker.open select { border-color: var(--accent); }
+
+.picker-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  min-width: 190px;
+  max-height: min(360px, 60vh);
+  overflow-y: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: #1a1b17;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 18px 40px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(218, 181, 109, 0.06);
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px) scale(0.98);
+  transform-origin: top right;
+  transition: opacity 0.16s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s linear 0.18s;
+}
+.picker.open .picker-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 0.16s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0s;
+}
+.picker-item {
+  position: relative;
+  padding: 9px 12px 9px 32px;
+  border-radius: 6px;
+  font-family: var(--f-body);
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text);
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.picker-item:hover,
+.picker-item:focus { background: var(--accent-soft); }
+.picker-item[aria-selected="true"] { color: var(--accent-bright); }
+.picker-item[aria-selected="true"]::before {
+  content: "";
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  margin-top: -6px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f4d695' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 12 5 5L20 6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+@media (max-width: 640px) {
+  .picker-menu { max-height: min(420px, 62vh); }
+  .picker-item { padding-top: 11px; padding-bottom: 11px; }
+}
+
+/* ---------- Pencereler: telefonda ortada, her yerde yumusak acilis ---------- */
+@media (max-width: 640px) {
+  .modal-overlay { align-items: center; padding: 16px; }
+  .modal-box,
+  #random-modal .modal-box,
+  #rematch-modal .modal-box,
+  #add-film-modal .modal-box,
+  #feedback-modal .modal-box,
+  #confirm-modal .modal-box {
+    max-height: 88svh;
+    border-radius: 16px;
+    border: 1px solid rgba(218, 181, 109, 0.75);
+    padding: 22px 16px 20px;
+  }
+  .modal-box::before { display: none; }
+  .modal-close { top: 12px; right: 12px; }
+}
+
+.modal-overlay {
+  opacity: 1;
+  transition: opacity 0.22s ease, display 0.22s allow-discrete;
+}
+.modal-overlay.hidden { opacity: 0; }
+.modal-box {
+  transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.22s ease;
+}
+.modal-overlay.hidden .modal-box { opacity: 0; transform: translateY(12px) scale(0.97); }
+@starting-style {
+  .modal-overlay:not(.hidden) { opacity: 0; }
+  .modal-overlay:not(.hidden) .modal-box { opacity: 0; transform: translateY(12px) scale(0.97); }
+}
+
+/* ---------- Dokunus tepkisi: her basilan sey abartisiz karsilik verir ---------- */
+:where(button, summary, select, a, label, .hticket, .side-link, .movie-card, .dropzone) {
+  -webkit-tap-highlight-color: transparent;
+}
+:where(button, .csv-action-btn, .random-link, .side-link, .hticket, .owned-chip, .rentbuy-chip, .candidate-card, .top-link, .picker-hit) {
+  transition:
+    transform 0.14s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.2s ease,
+    filter 0.18s ease;
+}
+:where(button, .csv-action-btn, .random-link, .side-link, .owned-chip, .rentbuy-chip, .candidate-card):not(:disabled):active {
+  transform: scale(0.96);
+}
+.hticket:active { transform: scale(0.985); }
+.picker:has(.picker-hit:active) select { transform: scale(0.96); }
+.picker select { transition: transform 0.14s ease, border-color 0.18s ease; }
+.dropzone:not(.compact):active { transform: scale(0.99); }
+.howto-box summary:active { opacity: 0.85; }
+
+/* posterler uzerine gelince hafifce kalkar */
+.movie-poster { transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
+.movie-card:hover .movie-poster { transform: translateY(-3px); }
+.movie-card:active .movie-poster { transform: translateY(-1px) scale(0.98); }
+
+/* isaretlenen kutular yumusak dolar */
+input[type="checkbox"] { transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal-box,
+  .picker-menu,
+  .movie-poster { transition: none; }
+  :where(button, .csv-action-btn, .random-link, .side-link, .hticket, .owned-chip, .rentbuy-chip, .candidate-card):active,
+  .movie-card:hover .movie-poster,
+  .movie-card:active .movie-poster { transform: none; }
+}
