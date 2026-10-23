@@ -17,7 +17,7 @@
 Upload the CSV that Letterboxd exports for your watchlist. WatchPlan looks every film up on JustWatch for your country and turns the result into a plan:
 
 - **A subscription order.** Each platform is a ticket, ordered by how many of your films it carries. Pick a ticket to see its films. The order never jumps around when you tick a service you already own.
-- **What you can already watch.** Tick the services you already pay for and their films move to *Zaten Sende Var* ("you already have these") and the plan is recalculated for the rest.
+- **What you can already watch.** Tick the services you already pay for and their films move to *Already Have* and the plan is recalculated for the rest.
 - **Rent or buy.** Films with no subscription option, with their rent/buy prices, cheapest first.
 - **Nowhere.** Films that aren't streaming anywhere in your country right now.
 
@@ -32,7 +32,7 @@ Mark films as watched, add or remove films without re-exporting from Letterboxd,
 | ![First visit](docs/screenshots/first-visit.jpg) | ![Random pick](docs/screenshots/random-pick.jpg) |
 
 <p align="center">
-  <img src="docs/screenshots/mobile.jpg" alt="Mobile" width="420">
+  <img src="docs/screenshots/mobile.jpg" alt="Mobile: first visit and results" width="560">
 </p>
 
 ## Features

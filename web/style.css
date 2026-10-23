@@ -2987,7 +2987,7 @@ button.top-link {
   .dropzone:not(.compact) .dropzone-icon { width: 44px; height: 54px; margin-bottom: 10px; }
   .dropzone:not(.compact) .dropzone-text { font-size: 23px; line-height: 28px; }
   .dropzone:not(.compact) .dropzone-sub { font-size: 15px; line-height: 21px; }
-  .upload-bar:not(:has(.dropzone.compact)) .csv-actions { margin-top: 18px; }
+  .upload-bar:not(:has(.dropzone.compact)) .csv-actions { grid-template-columns: 1fr; gap: 10px; margin-top: 18px; }
 
   /* telefonda zemin bos kalmasin: yanik kenarlar ve toz belirgin */
   body::before,
