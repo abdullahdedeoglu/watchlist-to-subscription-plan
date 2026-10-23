@@ -1,196 +1,76 @@
-# Watchlist -> Abonelik Plani
+<p align="center">
+  <img src="web/assets/og-image.jpg" alt="WatchPlan" width="760">
+</p>
 
-Letterboxd watchlist CSV'sini JustWatch katalogu ile eslestirip, "hangi ay
-hangi platforma abone olursam watchlist'i en hizli bitiririm" planini
-cikaran bir script. Ulke secilebilir (varsayilan Turkiye).
+<p align="center">
+  <b>Which streaming services should you subscribe to, and in what order, to get through your Letterboxd watchlist as fast as possible?</b>
+</p>
 
-## Kurulum
+<p align="center">
+  <a href="https://watchplan.onrender.com"><b>Try it live → watchplan.onrender.com</b></a>
+</p>
 
-```
+---
+
+## What it does
+
+Upload the CSV that Letterboxd exports for your watchlist. WatchPlan looks every film up on JustWatch for your country and turns the result into a plan:
+
+- **A subscription order.** Each platform is a ticket, ordered by how many of your films it carries. Pick a ticket to see its films. The order never jumps around when you tick a service you already own.
+- **What you can already watch.** Tick the services you already pay for and their films move to *Zaten Sende Var* ("you already have these") and the plan is recalculated for the rest.
+- **Rent or buy.** Films with no subscription option, with their rent/buy prices, cheapest first.
+- **Nowhere.** Films that aren't streaming anywhere in your country right now.
+
+Mark films as watched, add or remove films without re-exporting from Letterboxd, fix a wrong match from JustWatch's candidates, search inside your list, or let a die pick tonight's film.
+
+![Results screen](docs/screenshots/results.jpg)
+
+## Screenshots
+
+| First visit | Random pick |
+|---|---|
+| ![First visit](docs/screenshots/first-visit.jpg) | ![Random pick](docs/screenshots/random-pick.jpg) |
+
+<p align="center">
+  <img src="docs/screenshots/mobile.jpg" alt="Mobile" width="420">
+</p>
+
+## Features
+
+- 20 countries, Turkish and English interface
+- Two sample lists to try it without an account: IMDb Top 250 and Letterboxd Top 500
+- Remembers your watchlist, owned services and watched films between visits
+- Flags uncertain matches (remakes, same-title films) and lets you pick the right one
+- Works on phones: the ticket list becomes a swipeable strip
+
+## How it works
+
+- **Matching.** Films are searched on JustWatch's GraphQL API, through [simple-justwatch-python-api](https://github.com/Electronic-Mango/simple-justwatch-python-api). A match needs the year and the title to agree; when they don't, the film is flagged for review instead of silently guessing.
+- **Being gentle with an unofficial API.** Searches are batched with GraphQL aliases (many titles per request), common titles are answered from a pre-fetched index of the country's popular catalog, and concurrency adapts with an AIMD limiter that backs off when JustWatch starts refusing requests. Results are cached and shared, so a film is only ever looked up once per country.
+- **The plan.** A greedy set cover works out how few subscriptions cover the whole list: repeatedly pick the platform that covers the most films not yet covered, until nothing is left. Owned services and watched films are applied in the browser, so toggling them is instant.
+- **Stack.** A small Python standard-library HTTP server, vanilla HTML/CSS/JS on the front end, Upstash Redis for storage when hosted, Render for hosting.
+
+## Run it locally
+
+```bash
 pip install -r requirements.txt
-```
-
-Kurulum sirasinda hata alirsan (ozellikle Linux/Mac'te "externally managed
-environment" hatasi):
-
-```
-pip install -r requirements.txt --break-system-packages
-```
-
-## Kullanim (gorsel arayuz - onerilen)
-
-```
 python server.py
 ```
 
-Tarayicida otomatik olarak bir sayfa acilir (http://localhost:8765).
-Ustteki acilir menuden ulke sec (varsayilan Turkiye), watchlist CSV
-dosyasini sayfaya surukle birak (ya da tikla ve sec) - JustWatch'ta arama
-arka planda ilerleme cubugu ile calisir, bitince her platformun altinda
-hangi filmleri izleyebilecegin poster'lariyla gorunur. Bir postere
-tiklarsan o filmi o platformda izleyebilecegin sayfa yeni sekmede acilir.
-Sectigin ulke tarayicida hatirlanir.
+It opens http://localhost:8765. Without Upstash credentials everything is stored in local files.
 
-Her filmin altinda o filmin bulundugu diger platformlar da kucuk harfle
-gorunur ("ayrica: ...").
+There is also a command-line version that prints the plan and writes `plan.json`:
 
-**Sahip oldugun platformlar**: Stat kutularinin altinda tum platformlar
-checkbox olarak listelenir. Zaten abone oldugun platformlari isaretlersen,
-plan o platformlardaki filmleri "ucretsiz" sayip yesil bir "Zaten
-izleyebilirsin" bolumunde ayri gosterir, aylik plani da sadece geri kalan
-filmler icin yeniden kurar. Bu isaretleme sunucuya gitmez, tamamen
-tarayicida (aninda) hesaplanir - secimin de tarayicida hatirlanir.
-
-**Izledim isaretleme**: Her film posterinin sag ust kosesindeki tikle
-tiklarsan, o film "izlendi" sayilir; plandan (aylik plan, zaten
-izleyebilirsin, hicbir yerde yok - hepsinden) kaybolur ve istatistikler
-yeniden hesaplanir. En altta "Izledigin filmler" bolumunden hangilerini
-izledigini gorebilir, "geri al" ile yanlislikla isaretledigini geri
-cikarabilirsin. Bu da tamamen tarayicida, aninda calisir.
-
-**Rastgele film oner**: "Sahip oldugun platformlar" panelinin altinda ayri
-bir platform secim listesi ve "Rastgele film sec" butonu var. Hicbir
-platform secmezsen tum watchlist'teki izlenebilir filmler arasindan (en az
-bir platformda bulunanlar; izledigin filmler havuza girmez), platform
-secersen sadece o platform(lar)daki filmler arasindan rastgele bir film
-onerir. Postere/baslige tiklamana gerek yok - "Baska film" ile tekrar
-zar atabilir, "Izledim isaretle" ile direkt oradan isaretleyebilirsin.
-
-**Eslesme kontrolu**: Bir filmin JustWatch'ta bulunan yili CSV'deki yille
-uyusmuyorsa (remake, ayni isimli baska film riski), poster'in sol ust
-kosesinde sari bir uyari isareti cikar ve filmin altinda hangi filme
-eslesildigi yazar ("JustWatch: ..."). Isarete (ya da "hicbir yerde yok"
-listesindeki sari cerceveli filme) tiklarsan, JustWatch'taki tum aday
-sonuclar poster'lariyla acilir - dogru olani secince eslesme kalici olarak
-duzeltilir ve plan yeniden hesaplanir. Bu, mevcut cache'teki eski
-eslesmeler icin de (yeniden arama yapmadan) geriye donuk calisir.
-
-**Watchlist hatirlanir**: Bir kere CSV surukleyip biraktiktan sonra, sunucu
-onu `last_watchlist.csv` dosyasina kaydeder. Sayfayi kapatip tekrar
-actiginda watchlist otomatik yuklenir - CSV'yi tekrar surukleman gerekmez.
-Ulke acilir menusunden farkli bir ulke sectiginde de, elindeki watchlist
-icin otomatik olarak o ulkede arama baslar (sadece cache'te olmayanlar
-aranir, aynen yukaridaki mantikla). CSV'yi sadece watchlist gercekten
-degistiginde (yeni film ekleyip cikardiginda) tekrar suruklemen yeterli -
-bu durumda da sadece yeni eklenenler aranir.
-
-Kapatmak icin terminal penceresini kapat ya da Ctrl+C.
-
-## Kullanim (terminal / CLI)
-
-```
-python sync.py watchlist-feelslikesyd-2026-08-17-15-39-utc.csv --country TR
+```bash
+python sync.py watchlist.csv --country TR --owned "Netflix,Disney Plus"
 ```
 
-CSV dosya adini vermezsen, script klasordeki `watchlist-*.csv` pattern'ine
-uyan ilk dosyayi otomatik kullanir. `--country` verilmezse TR kullanilir:
+## Notes
 
-```
-python sync.py
-python sync.py --country US
-python sync.py --owned "Netflix,Disney Plus"
-```
+- JustWatch has no official public API. If they change it, searches can break until the library catches up.
+- Only subscription (flatrate) offers count toward the plan; rent/buy is shown separately.
+- The interface is Turkish by default and switches to English for other countries or from the language menu.
 
-`--owned` ile zaten sahip oldugun platformlari virgulle ayirarak
-verebilirsin - bu platformlardaki filmler "zaten sahip oldugun
-platformlarda izleyebilirsin" listesine ayrilir, aylik plan sadece geri
-kalan filmler icin kurulur.
+---
 
-Desteklenen ulke kodlari icin `core.py` icindeki `COUNTRIES` sozlugune bak
-(TR, US, GB, DE, FR, ES, IT, NL, PT, BR, CA, AU, MX, PL, SE, IN, JP, KR, RU, AR).
-
-Gorsel arayuz ile CLI ayni `justwatch_cache.json` dosyasini paylasir -
-hangisini kullanirsan kullan, diger tarafta da cache guncel kalir. Cache
-her ulke icin ayri ayri tutulur, yani bir filmi bir kere TR icin aramak
-US sonuclarini etkilemez (ve tam tersi).
-
-## Ne yapiyor?
-
-1. CSV'yi okur (`Date, Name, Year, Letterboxd URI` kolonlari).
-2. `justwatch_cache.json` icindeki cache'e bakar. Secilen ulke icin
-   cache'te olmayan (yeni eklenen, ya da daha once baska bir ulke icin
-   aranmis) filmleri tespit edip **sadece onlari** JustWatch'ta arar - ayni
-   anda en fazla 6 istek paralel gider (ag gecikmesi darbogaz oldugu icin
-   bu onemli hiz kazandirir), ayni baslik+yil birden fazla satirda geciyorsa
-   tek arama yapilip sonuc hepsine uygulanir. Zaten o ulke icin cache'te olan
-   filmler icin tekrar istek atmaz.
-3. Her film icin arama sonuclarindan yil eslesen kaydi secer; eslesme yoksa
-   ilk sonucu kullanir. Sadece `FLATRATE` (abonelik) tipi teklifleri
-   platform listesine ekler - kirala/satin al teklifleri sayilmaz.
-4. CSV'den cikmis ama cache'te hala duran filmleri "watchlist'ten cikmis"
-   olarak raporlar (cache'ten silmez, sadece bilgi verir).
-5. Sahip oldugun platform olarak isaretlenenler varsa (`--owned` / gorsel
-   arayuzdeki checkbox'lar), o platformlardaki filmleri once "zaten
-   izleyebilirsin" listesine ayirir, aylik plana dahil etmez.
-6. Kalan filmler icin greedy set-cover algoritmasi ile aylik plan uretir:
-   her adimda, kalan filmlerin en cogunu kapsayan platformu secer, o
-   filmleri listeden dusurur, kalan filmler icin tekrarlar. Hicbir
-   platformda (abonelikle) bulunamayan filmler ayri bir grupta gosterilir.
-7. Yil eslesmeyen filmleri "kontrol onerilir" olarak isaretler (CLI'da
-   rapor sonunda listelenir; gorsel arayuzde tek tek duzeltilebilir).
-8. Sonucu hem terminale yazdirir hem de `plan.json` dosyasina kaydeder.
-
-## Watchlist'i guncelleme
-
-1. Letterboxd'dan watchlist'i tekrar CSV olarak export et (Letterboxd
-   ayarlari -> Import & Export -> Export Data).
-2. Yeni CSV dosyasini gorsel arayuze surukle birak, ya da
-   `python sync.py <yeni-csv-dosyasi>` calistir.
-
-Sadece yeni eklenen filmler JustWatch'ta aranir, eskiden aranmis filmler
-cache'ten okunur. CSV'den cikan filmler "watchlist'ten cikmis" olarak
-raporlanir ama cache'ten silinmez.
-
-## Dosyalar
-
-- `server.py` - gorsel surukle-birak arayuz (yerel web sunucusu)
-- `web/` - arayuzun HTML/CSS/JS dosyalari
-- `sync.py` - terminal (CLI) script
-- `core.py` - JustWatch eslestirme, cache ve plan mantigi (ikisi de bunu kullanir)
-- `justwatch_cache.json` - film -> platform cache'i (kendisi olusturur/gunceller)
-- `last_watchlist.csv` - gorsel arayuze en son yuklenen CSV (sayfa acilista otomatik yuklenir icin)
-- `plan.json` - CLI'nin urettigi en son aylik plan
-- `requirements.txt` - Python bagimliliklari
-
-## Web sitesi olarak barındırma (opsiyonel)
-
-Bu proje, herkesin linkten girip watchlist'ini yükleyebileceği ücretsiz bir
-web sitesi olarak da barındırılabilir. Kod buna hazır (session bazlı
-kullanıcı ayrımı + Upstash Redis üzerinden kalıcı depolama), ama hesap açma
-adımlarını senin yapman gerekiyor:
-
-1. **Upstash** (ücretsiz, kredi kartsız): [upstash.com](https://upstash.com)
-   üzerinde hesap aç, "Create Database" ile bir Redis veritabanı oluştur.
-   Veritabanının sayfasında **REST API** bölümünden `UPSTASH_REDIS_REST_URL`
-   ve `UPSTASH_REDIS_REST_TOKEN` değerlerini kopyala.
-2. **Render** (ücretsiz, kredi kartsız): [render.com](https://render.com)
-   üzerinde hesap aç, "New" -> "Blueprint" ile bu GitHub reposunu bağla
-   (repodaki `render.yaml` build/start komutlarını otomatik doldurur).
-   Kurulum sırasında yukarıda kopyaladığın iki değeri `UPSTASH_REDIS_REST_URL`
-   / `UPSTASH_REDIS_REST_TOKEN` ortam değişkenlerine yapıştır.
-3. Render sana `https://<isim>.onrender.com` gibi gerçek, paylaşılabilir bir
-   link verir. Deploy bitince siteye giren herkes kendi watchlist'ini
-   yükleyebilir; JustWatch eşleştirme cache'i tüm ziyaretçiler arasında
-   paylaşılır (aynı filmi ikinci kez arayan olmaz), watchlist ve elle
-   eklenen/çıkarılan filmler ise görünmez bir session cookie ile kişiye özel
-   kalır.
-
-Bilinmesi gerekenler: ücretsiz Render katmanı 15 dakika hareketsizlikten
-sonra uykuya geçer, sıradaki ziyaretçi ~1 dakika soğuk başlangıç bekler; bu
-$0 kalarak ortadan kaldırılamıyor. `python server.py` ile yerel kullanım bu
-değişikliklerden etkilenmez - Upstash ortam değişkenleri yoksa her şey
-bugünkü gibi yerel dosyalara yazılır.
-
-## Notlar
-
-- JustWatch'un resmi olmayan GraphQL API'sini kullanan
-  `simple-justwatch-python-api` kutuphanesine dayanir. API JustWatch
-  tarafindan degistirilirse script bozulabilir.
-- "Hicbir platformda bulunamadi" demek, o filmin secilen ulkede JustWatch
-  kataloginda abonelikle (FLATRATE) izlenebilecegi bir servis olmadigi
-  anlamina gelir - kirala/satin al secenegi olabilir ama bu script sadece
-  abonelikleri sayar.
-- Arama sirasinda bir filmde hata olursa (agdaki sorun, rate limit, hicbir
-  sonuc bulunamamasi) script durmaz; o filmi "sorunlu filmler" listesine
-  ekleyip devam eder. Bu listeyi terminal ciktisinda ve `plan.json` icindeki
-  `errors` alaninda gorebilirsin.
+Made by [Abdullah Dedeoğlu](https://github.com/abdullahdedeoglu).
