@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="web/assets/og-image.jpg" alt="WatchPlan" width="760">
+  <img src="docs/og-image-en.jpg" alt="WatchPlan: Where can I watch all this?" width="760">
 </p>
 
 <p align="center">
