@@ -203,9 +203,9 @@ body::after {
 .page:has(#progress:not(.hidden)) .top { padding-top: 32px; }
 .page:has(#progress:not(.hidden)) .top-bar { min-height: 92px; }
 .page:not(:has(.dropzone.compact)) .brand-mark,
-.page:has(#progress:not(.hidden)) .brand-mark { height: 66px; }
-.page:not(:has(.dropzone.compact)) .brand-name { width: 347px; }
-.page:has(#progress:not(.hidden)) .brand-name { width: 380px; }
+.page:has(#progress:not(.hidden)) .brand-mark { height: 52px; }
+.page:not(:has(.dropzone.compact)) .brand-name { width: 272px; }
+.page:has(#progress:not(.hidden)) .brand-name { width: 290px; }
 
 .brand {
   margin: 0;
@@ -221,7 +221,7 @@ body::after {
 .brand-mark {
   display: block;
   width: auto;
-  height: 60px;
+  height: 48px;
   flex: none;
   margin-right: 2px;
 }
@@ -230,7 +230,7 @@ body::after {
    genislikler cizimlerden olculdu: sonuc 314, ilk ziyaret 347, arama 380 */
 .brand-name {
   display: block;
-  width: 314px;
+  width: 250px;
   height: auto;
   margin-left: 4px;
 }
@@ -297,10 +297,10 @@ button.top-link {
 /* tek satir anlatim: 22/30 */
 .subtitle {
   color: var(--text);
-  font-size: 22px;
-  line-height: 30px;
-  letter-spacing: -0.15px;
-  margin: 16px 0 0 22px;
+  font-size: 18px;
+  line-height: 26px;
+  letter-spacing: -0.1px;
+  margin: 14px 0 0 22px;
 }
 
 .page:has(#progress:not(.hidden)) .subtitle { margin: 28px 0 0 24px; }
@@ -2339,10 +2339,10 @@ button.top-link {
   .page:has(#progress:not(.hidden)) .top::before { top: -60px; right: 8px; opacity: 0.14; }
   .brand-name,
   .page:not(:has(.dropzone.compact)) .brand-name,
-  .page:has(#progress:not(.hidden)) .brand-name { width: 260px; }
+  .page:has(#progress:not(.hidden)) .brand-name { width: 230px; }
   .brand-mark,
   .page:not(:has(.dropzone.compact)) .brand-mark,
-  .page:has(#progress:not(.hidden)) .brand-mark { height: 50px; }
+  .page:has(#progress:not(.hidden)) .brand-mark { height: 44px; }
   .howto-content { grid-template-columns: 1fr; row-gap: 20px; }
   .howto-steps { padding-right: 0; }
   .howto-video-card { width: auto; max-width: 420px; padding-left: 0; border-left: none; }
