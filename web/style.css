@@ -3112,42 +3112,104 @@ button.top-link {
   .modal-overlay:not(.hidden) .modal-box { opacity: 0; transform: translateY(12px) scale(0.97); }
 }
 
-/* ---------- Dokunus tepkisi: her basilan sey abartisiz karsilik verir ---------- */
-:where(button, summary, select, a, label, .hticket, .side-link, .movie-card, .dropzone) {
+/* ---------- Dokunus tepkisi: tiklanabilir her sey abartisiz, yumusak
+   karsilik verir (uzerine gelince, basinca, odaklaninca) ---------- */
+:root { --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+:where(button, summary, select, a, label, input, textarea, .hticket, .side-link, .movie-card, .dropzone, .nowhere-chip, .picker-item, .feedback-movie-result-row) {
   -webkit-tap-highlight-color: transparent;
 }
-:where(button, .csv-action-btn, .random-link, .side-link, .hticket, .owned-chip, .rentbuy-chip, .candidate-card, .top-link, .picker-hit) {
+
+/* ortak gecis: renk, kenar, golge ve boyut birlikte, ayni yumusaklikta.
+   :is() ile, onceki tek tek tanimlanmis gecislerin uzerine yazsin diye */
+:is(button, .csv-action-btn, .random-link, .rentbuy-chip, .side-link, .hticket, .owned-chip,
+       .candidate-card, .nowhere-chip, .top-link, .picker-hit, .picker-item, .feedback-movie-result-row,
+       .dropzone, summary, input, textarea, select) {
   transition:
-    transform 0.14s ease,
-    background-color 0.18s ease,
-    border-color 0.18s ease,
-    color 0.18s ease,
-    box-shadow 0.2s ease,
-    filter 0.18s ease;
+    transform 0.22s var(--ease-soft),
+    background-color 0.22s ease,
+    border-color 0.22s ease,
+    color 0.22s ease,
+    box-shadow 0.25s ease,
+    filter 0.22s ease,
+    opacity 0.22s ease;
 }
-:where(button, .csv-action-btn, .random-link, .side-link, .owned-chip, .rentbuy-chip, .candidate-card):not(:disabled):active {
+
+/* basinca hafifce iceri gocer */
+:where(button, .csv-action-btn, .random-link, .rentbuy-chip, .side-link, .owned-chip, .candidate-card, .nowhere-chip.needs-review):not(:disabled):active {
   transform: scale(0.96);
+  transition-duration: 0.08s;
 }
-.hticket:active { transform: scale(0.985); }
+.hticket:active { transform: scale(0.985); transition-duration: 0.08s; }
+.dropzone:active { transform: scale(0.99); transition-duration: 0.08s; }
+.picker-item:active,
+.feedback-movie-result-row:active { background: rgba(218, 181, 109, 0.2); }
 .picker:has(.picker-hit:active) select { transform: scale(0.96); }
-.picker select { transition: transform 0.14s ease, border-color 0.18s ease; }
-.dropzone:not(.compact):active { transform: scale(0.99); }
-.howto-box summary:active { opacity: 0.85; }
+.picker select { transition: transform 0.22s var(--ease-soft), border-color 0.22s ease; }
+summary:active { opacity: 0.8; }
+.nowhere-chip.needs-review { cursor: pointer; }
+.nowhere-chip.needs-review:hover { border-color: var(--warn); }
+
+/* Nasil Kullanilir ayraci kendi animasyonunu korusun */
+.howto-box summary { transition: background-size 0.3s ease, opacity 0.22s ease; }
+
+/* acilir kutularin oku yumusak doner */
+summary::after { transition: transform 0.28s var(--ease-soft); }
+
+/* poster uzerindeki ✓ / × / ⚠: uzerine gelince buyur, basinca kuculur */
+.watched-toggle,
+.remove-toggle,
+.review-toggle { transition: transform 0.2s var(--ease-soft), background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease; }
+.watched-toggle:hover,
+.remove-toggle:hover,
+.review-toggle:hover { transform: scale(1.1); }
+.watched-toggle:active,
+.remove-toggle:active,
+.review-toggle:active { transform: scale(0.88); transition-duration: 0.08s; }
+
+/* pencere kapatma: uzerine gelince ceyrek tur doner */
+.modal-close { transition: transform 0.3s var(--ease-soft), border-color 0.2s ease, background-color 0.2s ease; }
+.modal-close:hover { transform: rotate(90deg); }
+.modal-close:active { transform: rotate(90deg) scale(0.9); }
+
+/* video kapagi */
+.howto-video-facade img { transition: transform 0.4s var(--ease-soft), filter 0.3s ease; }
+.howto-video-facade:hover img { transform: scale(1.03); filter: brightness(1.08); }
+.howto-video-play::before { transition: transform 0.25s var(--ease-soft); }
+.howto-video-facade:active .howto-video-play::before { transform: scale(0.94); }
+
+/* yazi alanlari: odaklaninca kenar ve hafif altin isilti */
+:where(.movie-search-input, .rematch-search-input, .feedback-textarea):focus {
+  box-shadow: 0 0 0 3px rgba(218, 181, 109, 0.14);
+}
+
+/* kutular: isaretlenince tik yumusak belirir, basinca kuculur */
+.hticket-owned-check { transition: transform 0.18s var(--ease-soft), background-color 0.2s ease, border-color 0.2s ease; }
+.hticket-owned-check:active { transform: scale(0.88); }
+.hticket-owned-check:checked::after { animation: check-pop 0.28s var(--ease-soft); }
+.owned-chip input { transition: transform 0.18s var(--ease-soft); }
+.owned-chip:active input { transform: scale(0.9); }
+@keyframes check-pop {
+  from { opacity: 0; transform: rotate(43deg) scale(0.4); }
+  to { opacity: 1; transform: rotate(43deg); }
+}
 
 /* posterler uzerine gelince hafifce kalkar */
-.movie-poster { transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
+.movie-poster { transition: transform 0.25s var(--ease-soft), border-color 0.22s ease, box-shadow 0.25s ease; }
 .movie-card:hover .movie-poster { transform: translateY(-3px); }
-.movie-card:active .movie-poster { transform: translateY(-1px) scale(0.98); }
-
-/* isaretlenen kutular yumusak dolar */
-input[type="checkbox"] { transition: background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease; }
+.movie-card:active .movie-poster { transform: translateY(-1px) scale(0.98); transition-duration: 0.08s; }
 
 @media (prefers-reduced-motion: reduce) {
   .modal-overlay,
   .modal-box,
   .picker-menu,
-  .movie-poster { transition: none; }
-  :where(button, .csv-action-btn, .random-link, .side-link, .hticket, .owned-chip, .rentbuy-chip, .candidate-card):active,
+  .movie-poster,
+  .howto-video-facade img { transition: none; }
+  :where(button, .csv-action-btn, .random-link, .rentbuy-chip, .side-link, .hticket, .owned-chip, .candidate-card, .nowhere-chip, .dropzone):active,
+  .watched-toggle:hover, .remove-toggle:hover, .review-toggle:hover,
+  .modal-close:hover, .modal-close:active,
+  .howto-video-facade:hover img,
   .movie-card:hover .movie-poster,
   .movie-card:active .movie-poster { transform: none; }
+  .hticket-owned-check:checked::after { animation: none; }
 }
