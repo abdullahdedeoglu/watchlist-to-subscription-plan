@@ -3245,3 +3245,47 @@ summary::after { transition: transform 0.28s var(--ease-soft); }
   .movie-card:active .movie-poster { transform: scale(0.96); filter: brightness(1.1); transition-duration: 0.06s; }
   summary:active { opacity: 0.65; }
 }
+
+/* ---------- Masaustu sonuc ekrani: sayfa kaymaz, her sey tek ekrana
+   sigar; filmler ve bilet listesi kendi kutularinda kayar ---------- */
+@media (min-width: 901px) {
+  .page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) {
+    height: 100svh;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 20px;
+  }
+  .page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) > * { flex: none; }
+  .page:has(.dropzone.compact):not(:has(#progress:not(.hidden))) > #results:not(.hidden) {
+    flex: 1 1 0;
+    min-height: 380px;
+    display: flex;
+    flex-direction: column;
+  }
+  #results:not(.hidden) > .control-shell {
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto;
+  }
+
+  /* ust seritteki hazir liste butonlari: ayracla aralarinda bosluk,
+     uzerine gelince yuvarlak koseli kendi zemini */
+  .upload-bar:has(.dropzone.compact) .csv-actions { gap: 14px; margin-right: 8px; }
+  .upload-bar:has(.dropzone.compact) .csv-action-btn {
+    position: relative;
+    border-left: none;
+    border-radius: 6px;
+    padding: 0 16px;
+  }
+  .upload-bar:has(.dropzone.compact) .csv-action-btn::after {
+    content: "";
+    position: absolute;
+    left: -8px;
+    top: 2px;
+    bottom: 2px;
+    width: 1px;
+    background: var(--border);
+    pointer-events: none;
+  }
+  .upload-bar:has(.dropzone.compact) .csv-actions { padding-left: 8px; }
+}
