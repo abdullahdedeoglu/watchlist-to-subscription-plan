@@ -3213,3 +3213,35 @@ summary::after { transition: transform 0.28s var(--ease-soft); }
   .movie-card:active .movie-poster { transform: none; }
   .hticket-owned-check:checked::after { animation: none; }
 }
+
+/* telefonda dokunus tepkisi bir kademe belirgin: basinca daha cok gocer ve
+   hafifce parlar, birakinca kucuk bir esneme ile yerine oturur (pencere
+   acilis/kapanis animasyonlari ayni kalir) */
+@media (max-width: 640px) and (prefers-reduced-motion: no-preference) {
+  :is(button, .csv-action-btn, .random-link, .rentbuy-chip, .side-link, .hticket, .owned-chip,
+      .candidate-card, .nowhere-chip, .top-link, .dropzone, .picker-item, .feedback-movie-result-row) {
+    transition:
+      transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
+      background-color 0.22s ease,
+      border-color 0.22s ease,
+      color 0.22s ease,
+      box-shadow 0.25s ease,
+      filter 0.22s ease,
+      opacity 0.22s ease;
+  }
+  :is(button, .csv-action-btn, .random-link, .rentbuy-chip, .side-link, .owned-chip, .candidate-card, .nowhere-chip.needs-review):not(:disabled):active {
+    transform: scale(0.93);
+    filter: brightness(1.15);
+    transition-duration: 0.06s;
+  }
+  .hticket:active { transform: scale(0.96); filter: brightness(1.12); transition-duration: 0.06s; }
+  .dropzone:active { transform: scale(0.97); filter: brightness(1.1); transition-duration: 0.06s; }
+  .picker:has(.picker-hit:active) select { transform: scale(0.9); border-color: var(--accent); }
+  .picker select { transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.22s ease; }
+  .watched-toggle:active,
+  .remove-toggle:active,
+  .review-toggle:active { transform: scale(0.8); transition-duration: 0.06s; }
+  .hticket-owned-check:active { transform: scale(0.8); }
+  .movie-card:active .movie-poster { transform: scale(0.96); filter: brightness(1.1); transition-duration: 0.06s; }
+  summary:active { opacity: 0.65; }
+}

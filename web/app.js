@@ -2025,3 +2025,7 @@ function enhancePicker(select, labelKey) {
 
 enhancePicker(langSelect, "langLabel");
 enhancePicker(countrySelect, "countryLabel");
+
+// iOS Safari dokunmatik ekranda :active durumunu ancak sayfada bir
+// touchstart dinleyicisi varsa uygular; basma tepkileri icin gerekli.
+document.addEventListener("touchstart", () => {}, { passive: true });
