@@ -199,6 +199,7 @@ STATIC_FILES = {
     "/": ("index.html", "text/html; charset=utf-8"),
     "/index.html": ("index.html", "text/html; charset=utf-8"),
     "/app.js": ("app.js", "application/javascript; charset=utf-8"),
+    "/particles.js": ("particles.js", "application/javascript; charset=utf-8"),
     "/style.css": ("style.css", "text/css; charset=utf-8"),
     "/robots.txt": ("robots.txt", "text/plain; charset=utf-8"),
     # Google Search Console sahiplik dogrulamasi - silinirse dogrulama duser
